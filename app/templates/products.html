@@ -1,48 +1,327 @@
 {% extends "base.html" %}
 
-{% block title %}পণ্য তালিকা - MemoLedger{% endblock %}
+{% block title %}পণ্য ও ক্যাটালগ - MemoLedger{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-  <div class="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+  <!-- Header Banner & Action Bar -->
+  <div class="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div>
-      <h1 class="text-xl font-bold text-slate-800" data-i18n="products">পণ্য ও ক্যাটালগ</h1>
-      <p class="text-xs text-slate-500 mt-0.5">সব নিবন্ধিত পণ্য ও বিভিন্ন সাইজ/ভ্যারিয়েন্টের তালিকা</p>
+      <h1 class="text-xl md:text-2xl font-bold text-slate-800" data-i18n="products">পণ্য ও ক্যাটালগ</h1>
+      <p class="text-xs md:text-sm text-slate-500 mt-1">সব নিবন্ধিত পণ্য, সাইজ/ভ্যারিয়েন্ট এবং স্টক তালিকা পরিচালনা করুন</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Search Input -->
+      <div class="relative w-full sm:w-64">
+        <input type="text" id="product-search-input" placeholder="পণ্য বা ব্র্যান্ড খুঁজুন..." class="w-full text-xs md:text-sm pl-8 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+        <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
+
+      <!-- Add Product Button -->
+      <button type="button" onclick="openAddProductModal()" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-4 py-2 rounded-lg text-xs md:text-sm shadow-sm transition-all flex items-center gap-1.5 min-touch active:scale-95 flex-shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <span>+ নতুন পণ্য</span>
+      </button>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <!-- Product Grid -->
+  <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
     {% for p in products %}
-    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-      <div class="flex items-start justify-between">
-        <div>
-          <span class="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded uppercase tracking-wider">{{ p.brand or "Unknown" }}</span>
-          <h2 class="text-base font-bold text-slate-800 mt-1">{{ p.name }}</h2>
-          <div class="text-xs text-slate-500">{{ p.product_type or "General" }}</div>
+    <div class="product-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between space-y-4"
+         data-name="{{ p.name|lower }}"
+         data-brand="{{ (p.brand or '')|lower }}">
+      
+      <div>
+        <!-- Brand & Actions -->
+        <div class="flex items-start justify-between gap-2">
+          <span class="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded uppercase tracking-wider">
+            {{ p.brand or "Unknown Brand" }}
+          </span>
+          <div class="flex items-center gap-1">
+            <button type="button" 
+                    onclick="openEditProductModal('{{ p.id }}', '{{ p.name|escape }}', '{{ (p.brand or '')|escape }}', '{{ (p.product_type or '')|escape }}', '{{ (p.description or '')|escape }}')"
+                    class="p-1.5 text-slate-400 hover:text-teal-700 hover:bg-slate-100 rounded transition-colors" title="পণ্য এডিট করুন">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button type="button" 
+                    onclick="deleteProduct('{{ p.id }}', '{{ p.name|escape }}')"
+                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="পণ্য মুছুন">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
         </div>
+
+        <h2 class="text-base font-bold text-slate-800 mt-1.5">{{ p.name }}</h2>
+        <div class="text-xs text-slate-500">{{ p.product_type or "General Item" }}</div>
       </div>
 
-      <div class="border-t border-slate-100 pt-3">
-        <div class="text-xs font-semibold text-slate-600 mb-2">ভ্যারিয়েন্টসমূহ:</div>
+      <!-- Variants Sub-Section -->
+      <div class="border-t border-slate-100 pt-3 space-y-2">
+        <div class="flex items-center justify-between text-xs font-bold text-slate-600">
+          <span>ভ্যারিয়েন্ট ও সাইজসমূহ:</span>
+          <button type="button" 
+                  onclick="openAddVariantModal('{{ p.id }}', '{{ p.name|escape }}')"
+                  class="text-[11px] text-teal-700 hover:text-teal-900 font-bold hover:underline flex items-center gap-0.5">
+            <span>+ ভ্যারিয়েন্ট যোগ</span>
+          </button>
+        </div>
+
         <div class="space-y-1.5">
           {% for v in p.variants %}
-          <div class="flex items-center justify-between text-xs bg-slate-50 p-2 rounded border border-slate-100">
+          <div class="flex items-center justify-between text-xs bg-slate-50 hover:bg-slate-100/70 p-2 rounded-lg border border-slate-200/80 transition-colors">
             <div>
-              <span class="font-medium text-slate-800">{{ v.size_value or "" }}{{ v.size_unit or "" }}</span>
-              {% if v.variant_code %}<span class="text-slate-500">({{ v.variant_code }})</span>{% endif %}
+              <span class="font-bold text-slate-800">{{ v.size_value or "" }}{{ v.size_unit or "" }}</span>
+              {% if v.variant_code %}<span class="text-teal-700 font-semibold">({{ v.variant_code }})</span>{% endif %}
             </div>
-            <div class="text-right">
-              <span class="font-bold text-slate-700">স্টক: {{ v.current_stock }}</span> &bull;
-              <span class="text-slate-500">৳{{ "%.2f"|format(v.cost_price) }}</span>
+            
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <span class="font-bold text-slate-700">স্টক: {{ v.current_stock }}</span> &bull;
+                <span class="text-slate-500 font-medium">৳{{ "%.2f"|format(v.cost_price) }}</span>
+              </div>
+              <button type="button" 
+                      onclick="openEditVariantModal('{{ v.id }}', '{{ v.sku or '' }}', '{{ v.size_value or '' }}', '{{ v.size_unit or '' }}', '{{ v.variant_code or '' }}', '{{ v.cost_price }}', '{{ v.retail_price }}', '{{ v.current_stock }}')"
+                      class="text-slate-400 hover:text-teal-700 p-1" title="ভ্যারিয়েন্ট এডিট">
+                ✎
+              </button>
             </div>
           </div>
+          {% else %}
+          <div class="text-xs text-slate-400 py-1">কোনো ভ্যারিয়েন্ট যোগ করা হয়নি।</div>
           {% endfor %}
         </div>
       </div>
+
     </div>
     {% endfor %}
   </div>
 
 </div>
+
+<!-- ================= 1. ADD PRODUCT MODAL ================= -->
+<div id="add-product-modal" class="fixed inset-0 bg-slate-900/60 modal-backdrop flex items-center justify-center p-4 z-50 hidden">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl modal-content">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-base md:text-lg font-bold text-slate-800">নতুন পণ্য যোগ করুন</h3>
+      <button type="button" onclick="closeModal('add-product-modal')" class="text-slate-400 hover:text-slate-600 p-1 font-bold text-lg">✕</button>
+    </div>
+
+    <form id="add-product-form" class="space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের নাম *</label>
+          <input type="text" id="add-p-name" placeholder="যেমন: Sunscreen Cream" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500" required>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ব্র্যান্ড</label>
+          <input type="text" id="add-p-brand" placeholder="যেমন: Neutrogena" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ক্যাটাগরি / ধরন</label>
+          <input type="text" id="add-p-type" placeholder="যেমন: Skin Care" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+        </div>
+      </div>
+
+      <!-- Initial Variant Subsection -->
+      <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+        <span class="text-xs font-bold text-slate-700">প্রারম্ভিক সাইজ ও দর:</span>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">সাইজ</label>
+            <input type="text" id="add-v-size" placeholder="যেমন: 625" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">একক (Unit)</label>
+            <input type="text" id="add-v-unit" placeholder="যেমন: ml, gm, pc" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">ভ্যারিয়েন্ট কোড</label>
+            <input type="text" id="add-v-code" placeholder="যেমন: SH, 13" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">ক্রয় মূল্য (৳) *</label>
+            <input type="number" step="0.5" id="add-v-cost" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold" required>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">বিক্রয় মূল্য (৳) *</label>
+            <input type="number" step="0.5" id="add-v-retail" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold" required>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-600 mb-1">প্রারম্ভিক স্টক</label>
+            <input type="number" step="1" id="add-v-stock" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold">
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2.5">
+        <button type="button" onclick="closeModal('add-product-modal')" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+          বাতিল
+        </button>
+        <button type="submit" id="save-product-btn" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-5 py-2.5 rounded-lg text-xs md:text-sm shadow-sm transition-all min-touch">
+          পণ্য সংরক্ষণ করুন (Save Product)
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= 2. EDIT PRODUCT MODAL ================= -->
+<div id="edit-product-modal" class="fixed inset-0 bg-slate-900/60 modal-backdrop flex items-center justify-center p-4 z-50 hidden">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl modal-content">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-base font-bold text-slate-800">পণ্য তথ্য পরিবর্তন</h3>
+      <button type="button" onclick="closeModal('edit-product-modal')" class="text-slate-400 hover:text-slate-600 p-1 font-bold text-lg">✕</button>
+    </div>
+
+    <form id="edit-product-form" class="space-y-3.5">
+      <input type="hidden" id="edit-p-id">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের নাম *</label>
+        <input type="text" id="edit-p-name" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500" required>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ব্র্যান্ড</label>
+          <input type="text" id="edit-p-brand" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ক্যাটাগরি</label>
+          <input type="text" id="edit-p-type" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">বিবরণ</label>
+        <textarea id="edit-p-desc" rows="2" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500"></textarea>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2.5">
+        <button type="button" onclick="closeModal('edit-product-modal')" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+          বাতিল
+        </button>
+        <button type="submit" id="save-edit-product-btn" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-5 py-2.5 rounded-lg text-xs shadow-sm transition-all min-touch">
+          পরিবর্তন সংরক্ষণ করুন (Save Changes)
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= 3. ADD VARIANT MODAL ================= -->
+<div id="add-variant-modal" class="fixed inset-0 bg-slate-900/60 modal-backdrop flex items-center justify-center p-4 z-50 hidden">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl modal-content">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div>
+        <h3 class="text-base font-bold text-slate-800">নতুন ভ্যারিয়েন্ট যোগ করুন</h3>
+        <p id="add-variant-pname" class="text-xs text-teal-700 font-semibold mt-0.5"></p>
+      </div>
+      <button type="button" onclick="closeModal('add-variant-modal')" class="text-slate-400 hover:text-slate-600 p-1 font-bold text-lg">✕</button>
+    </div>
+
+    <form id="add-variant-form" class="space-y-3.5">
+      <input type="hidden" id="add-var-pid">
+      <div class="grid grid-cols-3 gap-2.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">সাইজ</label>
+          <input type="text" id="add-var-size" placeholder="যেমন: 50" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg" required>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">একক</label>
+          <input type="text" id="add-var-unit" placeholder="ml" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">শেড/কোড</label>
+          <input type="text" id="add-var-code" placeholder="যেমন: J" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ক্রয় মূল্য (৳) *</label>
+          <input type="number" step="0.5" id="add-var-cost" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg font-bold" required>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">বিক্রয় মূল্য (৳) *</label>
+          <input type="number" step="0.5" id="add-var-retail" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg font-bold" required>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">স্টক</label>
+          <input type="number" step="1" id="add-var-stock" value="0" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg font-bold">
+        </div>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2.5">
+        <button type="button" onclick="closeModal('add-variant-modal')" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+          বাতিল
+        </button>
+        <button type="submit" id="save-variant-btn" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-5 py-2.5 rounded-lg text-xs shadow-sm transition-all min-touch">
+          ভ্যারিয়েন্ট সংরক্ষণ করুন (Save Variant)
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= 4. EDIT VARIANT MODAL ================= -->
+<div id="edit-variant-modal" class="fixed inset-0 bg-slate-900/60 modal-backdrop flex items-center justify-center p-4 z-50 hidden">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl modal-content">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-base font-bold text-slate-800">ভ্যারিয়েন্ট দর ও স্টক পরিবর্তন</h3>
+      <button type="button" onclick="closeModal('edit-variant-modal')" class="text-slate-400 hover:text-slate-600 p-1 font-bold text-lg">✕</button>
+    </div>
+
+    <form id="edit-variant-form" class="space-y-3.5">
+      <input type="hidden" id="edit-var-id">
+      <div class="grid grid-cols-3 gap-2.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">সাইজ</label>
+          <input type="text" id="edit-var-size" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">একক</label>
+          <input type="text" id="edit-var-unit" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">শেড/কোড</label>
+          <input type="text" id="edit-var-code" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ক্রয় মূল্য (৳) *</label>
+          <input type="number" step="0.5" id="edit-var-cost" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg font-bold" required>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">বিক্রয় মূল্য (৳) *</label>
+          <input type="number" step="0.5" id="edit-var-retail" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg font-bold" required>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">বর্তমান স্টক</label>
+          <input type="number" step="1" id="edit-var-stock" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg font-bold">
+        </div>
+      </div>
+
+      <div class="pt-2 flex items-center justify-between">
+        <button type="button" id="delete-variant-btn" class="text-rose-600 hover:text-rose-800 text-xs font-bold p-2">
+          ভ্যারিয়েন্ট মুছুন
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeModal('edit-variant-modal')" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+            বাতিল
+          </button>
+          <button type="submit" id="save-edit-variant-btn" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-5 py-2.5 rounded-lg text-xs shadow-sm transition-all min-touch">
+            সংরক্ষণ করুন (Save)
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/products.js"></script>
 {% endblock %}

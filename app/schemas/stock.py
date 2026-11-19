@@ -5,6 +5,14 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+class StockAdjustmentCreate(BaseModel):
+    variant_id: uuid.UUID
+    movement_type: str = "INVENTORY_ADJUSTMENT"  # PURCHASE_RECEIPT, SALE, INVENTORY_ADJUSTMENT, RETURN
+    quantity_change: Decimal
+    unit_cost: Optional[Decimal] = Decimal("0.00")
+    notes: Optional[str] = None
+
+
 class StockMovementResponse(BaseModel):
     id: uuid.UUID
     product_variant_id: uuid.UUID

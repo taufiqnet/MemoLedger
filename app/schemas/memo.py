@@ -5,8 +5,21 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class MemoLineCreate(BaseModel):
+    raw_text: Optional[str] = ""
+    parsed_name: str
+    parsed_variant: Optional[str] = None
+    parsed_qty: Decimal = Decimal("1.00")
+    parsed_unit: str = "piece"
+    parsed_unit_price: Decimal = Decimal("0.00")
+    parsed_line_total: Decimal = Decimal("0.00")
+    matched_variant_id: Optional[uuid.UUID] = None
+
+
 class MemoLineUpdate(BaseModel):
-    id: uuid.UUID
+    id: Optional[uuid.UUID] = None
+    line_number: Optional[int] = None
+    raw_text: Optional[str] = None
     parsed_name: Optional[str] = None
     parsed_variant: Optional[str] = None
     parsed_qty: Decimal = Decimal("1.00")
@@ -15,6 +28,18 @@ class MemoLineUpdate(BaseModel):
     parsed_line_total: Decimal = Decimal("0.00")
     matched_variant_id: Optional[uuid.UUID] = None
     status: Optional[str] = "AUTO_MATCHED"
+
+
+class MemoLinesSaveDraftRequest(BaseModel):
+    lines: List[MemoLineUpdate]
+    written_total: Optional[Decimal] = None
+
+
+class MemoManualCreate(BaseModel):
+    supplier_id: Optional[uuid.UUID] = None
+    memo_number: Optional[str] = None
+    memo_date: Optional[str] = None
+    lines: List[MemoLineCreate] = []
 
 
 class MemoLineResponse(BaseModel):

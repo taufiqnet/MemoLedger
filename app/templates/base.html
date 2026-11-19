@@ -10,70 +10,247 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="/static/css/output.css">
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col pb-20 md:pb-0">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col pb-24 md:pb-0">
 
   <!-- Desktop & Tablet Header -->
-  <header class="bg-teal-700 text-white shadow-md sticky top-0 z-50">
-    <div class="container flex items-center justify-between py-3">
+  <header class="bg-teal-700 text-white shadow-md sticky top-0 z-40">
+    <div class="container flex items-center justify-between py-2.5">
+      
+      <!-- Brand & Shop Name -->
       <div class="flex items-center gap-3">
-        <a href="/dashboard" class="flex items-center gap-2 font-bold text-xl tracking-tight">
-          <span class="bg-teal-900 text-teal-200 px-2 py-1 rounded-md text-sm">ML</span>
+        <a href="/dashboard" class="flex items-center gap-2 font-bold text-lg md:text-xl tracking-tight">
+          <span class="bg-teal-900 text-teal-200 px-2.5 py-1 rounded-md text-xs md:text-sm font-bold shadow-xs">ML</span>
           <span data-i18n="app_title">মেমোলেজার</span>
         </a>
+        <span class="hidden lg:inline-block text-xs bg-teal-800/80 text-teal-100 px-2 py-0.5 rounded-full border border-teal-600">
+          {{ tenant.name if tenant else 'Dhaka Cosmetics Mart' }}
+        </span>
       </div>
 
-      <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
-        <a href="/dashboard" class="hover:text-teal-200 transition-all" data-i18n="dashboard">ড্যাশবোর্ড</a>
-        <a href="/upload" class="hover:text-teal-200 transition-all" data-i18n="upload">মেমো তুলুন</a>
-        <a href="/stock" class="hover:text-teal-200 transition-all" data-i18n="stock_ledger">স্টক লেজার</a>
-        <a href="/products" class="hover:text-teal-200 transition-all" data-i18n="products">পণ্য তালিকা</a>
-        <a href="/suppliers" class="hover:text-teal-200 transition-all" data-i18n="suppliers">সরবরাহকারী</a>
-        <a href="/ask-data" class="hover:text-teal-200 transition-all" data-i18n="ask_data">তথ্য জিজ্ঞাসা</a>
+      <!-- Desktop Navigation Menu -->
+      <nav class="hidden md:flex items-center gap-1.5 lg:gap-3 text-xs lg:text-sm font-medium">
+        <a href="/dashboard" class="px-2.5 py-1.5 rounded-md hover:bg-teal-800 hover:text-white transition-all text-teal-100" data-i18n="dashboard">ড্যাশবোর্ড</a>
+        <a href="/upload" class="px-2.5 py-1.5 rounded-md hover:bg-teal-800 hover:text-white transition-all text-teal-100" data-i18n="upload">মেমো তুলুন</a>
+        <a href="/stock" class="px-2.5 py-1.5 rounded-md hover:bg-teal-800 hover:text-white transition-all text-teal-100" data-i18n="stock_ledger">স্টক লেজার</a>
+        <a href="/products" class="px-2.5 py-1.5 rounded-md hover:bg-teal-800 hover:text-white transition-all text-teal-100" data-i18n="products">পণ্য তালিকা</a>
+        <a href="/suppliers" class="px-2.5 py-1.5 rounded-md hover:bg-teal-800 hover:text-white transition-all text-teal-100" data-i18n="suppliers">সরবরাহকারী</a>
+        <a href="/ask-data" class="px-2.5 py-1.5 rounded-md hover:bg-teal-800 hover:text-white transition-all text-teal-100" data-i18n="ask_data">তথ্য জিজ্ঞাসা</a>
       </nav>
 
-      <div class="flex items-center gap-3">
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 md:gap-3">
+        <!-- Direct Quick Action button -->
+        <a href="/upload" class="hidden sm:inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all active:scale-95">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="hidden lg:inline">+ নতুন মেমো</span>
+        </a>
+
         <!-- Language Switcher -->
-        <button id="lang-toggle-btn" class="bg-teal-800 hover:bg-teal-900 text-white text-xs px-3 py-1.5 rounded-full font-semibold transition-all">
-          English
+        <button id="lang-toggle-btn" class="bg-teal-800 hover:bg-teal-900 text-white text-xs px-2.5 py-1.5 rounded-md font-semibold transition-all border border-teal-600 flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+          <span>English</span>
+        </button>
+
+        <!-- Mobile Drawer Hamburger Toggle -->
+        <button id="mobile-menu-btn" class="md:hidden p-1.5 rounded-md text-teal-100 hover:bg-teal-800 hover:text-white transition-all focus:outline-none" aria-label="Toggle Navigation">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
       </div>
     </div>
   </header>
 
+  <!-- Mobile Slide-Out Drawer Navigation -->
+  <div id="mobile-drawer" class="fixed inset-0 z-50 hidden">
+    <!-- Backdrop -->
+    <div id="mobile-drawer-backdrop" class="absolute inset-0 bg-slate-900/60 modal-backdrop transition-opacity"></div>
+    
+    <!-- Drawer Panel -->
+    <div class="absolute top-0 right-0 bottom-0 w-72 bg-white shadow-2xl flex flex-col justify-between drawer-content z-10">
+      <div>
+        <div class="bg-teal-700 text-white p-5 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-base flex items-center gap-2">
+              <span class="bg-teal-900 text-teal-200 px-2 py-0.5 rounded text-xs">ML</span>
+              <span>মেমোলেজার মেনু</span>
+            </div>
+            <div class="text-xs text-teal-200 mt-1 truncate">{{ tenant.name if tenant else 'Dhaka Cosmetics Mart' }}</div>
+          </div>
+          <button id="mobile-drawer-close" class="text-white hover:text-teal-200 p-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <nav class="p-4 space-y-1 text-sm font-semibold text-slate-700">
+          <a href="/dashboard" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 transition-all">
+            <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            <span data-i18n="dashboard">ড্যাশবোর্ড</span>
+          </a>
+          <a href="/upload" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 transition-all text-teal-700 bg-teal-50">
+            <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span data-i18n="upload">মেমো তুলুন ও এন্ট্রি</span>
+          </a>
+          <a href="/stock" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 transition-all">
+            <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            <span data-i18n="stock_ledger">স্টক লেজার</span>
+          </a>
+          <a href="/products" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 transition-all">
+            <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            <span data-i18n="products">পণ্য ও ক্যাটালগ</span>
+          </a>
+          <a href="/suppliers" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 transition-all">
+            <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            <span data-i18n="suppliers">সরবরাহকারী ডিরেক্টরি</span>
+          </a>
+          <a href="/ask-data" class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 transition-all">
+            <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+            <span data-i18n="ask_data">তথ্য জিজ্ঞাসা (AI Chat)</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="p-4 border-t border-slate-200 text-xs text-slate-500 space-y-1">
+        <div>লগইন আছেন: <strong class="text-slate-700">{{ user.email if user else 'owner@dhakacosmetics.com' }}</strong></div>
+        <div class="text-[11px] text-teal-700">MemoLedger v1.0.0 (ঢাকা, বাংলাদেশ)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Toast Container -->
+  <div id="toast-container"></div>
+
   <!-- Main Body Content -->
-  <main class="container py-6 flex-1">
+  <main class="container py-4 md:py-6 flex-1">
     {% block content %}{% endblock %}
   </main>
 
-  <!-- Mobile Bottom Navigation Bar -->
-  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50 flex items-center justify-around py-2">
-    <a href="/dashboard" class="flex flex-col items-center text-xs text-slate-600 hover:text-teal-700">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-      <span data-i18n="dashboard">ড্যাশবোর্ড</span>
+  <!-- Mobile Bottom Navigation Bar (5-Tab Thumb Navigation) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-30 flex items-center justify-around py-1.5 px-2">
+    <!-- Dashboard -->
+    <a href="/dashboard" class="flex flex-col items-center justify-center text-[10px] text-slate-600 hover:text-teal-700 py-1 flex-1">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      <span class="mt-0.5" data-i18n="dashboard">ড্যাশবোর্ড</span>
     </a>
-    <a href="/upload" class="flex flex-col items-center text-xs text-teal-700 font-bold">
-      <div class="bg-teal-600 text-white p-2 rounded-full -mt-5 shadow-md">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+
+    <!-- Products -->
+    <a href="/products" class="flex flex-col items-center justify-center text-[10px] text-slate-600 hover:text-teal-700 py-1 flex-1">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+      <span class="mt-0.5" data-i18n="products">পণ্য</span>
+    </a>
+
+    <!-- Elevated Upload Action Button -->
+    <a href="/upload" class="flex flex-col items-center justify-center -mt-6 flex-1">
+      <div class="bg-teal-600 hover:bg-teal-700 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-2 border-white transition-transform active:scale-95">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       </div>
-      <span data-i18n="upload">মেমো তুলুন</span>
+      <span class="text-[10px] font-bold text-teal-800 mt-1" data-i18n="upload">মেমো</span>
     </a>
-    <a href="/stock" class="flex flex-col items-center text-xs text-slate-600 hover:text-teal-700">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-      <span data-i18n="stock_ledger">স্টক</span>
+
+    <!-- Stock -->
+    <a href="/stock" class="flex flex-col items-center justify-center text-[10px] text-slate-600 hover:text-teal-700 py-1 flex-1">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      <span class="mt-0.5" data-i18n="stock_ledger">স্টক</span>
     </a>
-    <a href="/ask-data" class="flex flex-col items-center text-xs text-slate-600 hover:text-teal-700">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-      <span data-i18n="ask_data">চ্যাট</span>
-    </a>
+
+    <!-- Menu / Drawer Toggle -->
+    <button id="mobile-drawer-toggle" class="flex flex-col items-center justify-center text-[10px] text-slate-600 hover:text-teal-700 py-1 flex-1 focus:outline-none">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <span class="mt-0.5">মেনু</span>
+    </button>
   </nav>
 
-  <!-- PWA Service Worker Registration -->
+  <!-- PWA Service Worker Registration & Global Modal/Toast JS -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/static/sw.js').catch(err => console.log('SW registration error:', err));
       });
     }
+
+    // Global Toast Function
+    window.showToast = function(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `toast-msg toast-${type}`;
+      toast.innerHTML = `
+        <div class="flex items-center gap-2">
+          ${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}
+          <span>${message}</span>
+        </div>
+        <button class="text-slate-400 hover:text-slate-700 text-sm font-bold ml-2" onclick="this.parentElement.remove()">×</button>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    };
+
+    // Global Modal Functions
+    window.openModal = function(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+    };
+
+    window.closeModal = function(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    };
+
+    // Close modal on ESC key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-backdrop, [id$="-modal"]').forEach(m => {
+          if (!m.classList.contains('hidden') && m.id !== 'toast-container') {
+            m.classList.add('hidden');
+            document.body.style.overflow = '';
+          }
+        });
+      }
+    });
+
+    // Mobile Drawer Handlers
+    const drawer = document.getElementById('mobile-drawer');
+    const drawerToggle = document.getElementById('mobile-drawer-toggle');
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const drawerClose = document.getElementById('mobile-drawer-close');
+    const drawerBackdrop = document.getElementById('mobile-drawer-backdrop');
+
+    function openDrawer() {
+      if (drawer) {
+        drawer.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+    function closeDrawer() {
+      if (drawer) {
+        drawer.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+    }
+
+    if (drawerToggle) drawerToggle.addEventListener('click', openDrawer);
+    if (menuBtn) menuBtn.addEventListener('click', openDrawer);
+    if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
+    if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeDrawer);
+
+    // Active link highlighting
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('header nav a').forEach(a => {
+      if (a.getAttribute('href') === currentPath) {
+        a.classList.remove('text-teal-100');
+        a.classList.add('bg-teal-800', 'text-white', 'shadow-xs');
+      }
+    });
   </script>
   <script type="module" src="/static/js/i18n.js"></script>
   {% block scripts %}{% endblock %}

@@ -4,91 +4,137 @@
 
 {% block content %}
 <div id="review-container" 
-     class="space-y-6"
+     class="space-y-5"
      data-memo-id="{{ memo.id }}"
      data-written-total="{{ memo.written_total or 0 }}"
      data-lines='{{ lines_json | safe }}'>
 
-  <!-- Header & Action Bar -->
-  <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+  <!-- Header & Top Action Bar -->
+  <div class="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
     <div>
-      <div class="flex items-center gap-2">
-        <h1 class="text-xl font-bold text-slate-800">মেমো #{{ memo.memo_number or 'অনির্ধারিত' }}</h1>
-        <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold {{ 'bg-emerald-100 text-emerald-800' if memo.status == 'APPROVED' else 'bg-amber-100 text-amber-800' }}">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <h1 class="text-xl md:text-2xl font-bold text-slate-800">মেমো #{{ memo.memo_number or 'অনির্ধারিত' }}</h1>
+        <span class="text-xs px-3 py-1 rounded-full font-bold {{ 'bg-emerald-100 text-emerald-800 border border-emerald-200' if memo.status == 'APPROVED' else 'bg-amber-100 text-amber-800 border border-amber-200' }}">
           {{ "অনুমোদিত (APPROVED)" if memo.status == "APPROVED" else "যাচাই প্রয়োজন (REVIEW REQUIRED)" }}
         </span>
       </div>
-      <p class="text-xs text-slate-500 mt-1">
-        সরবরাহকারী: <strong class="text-slate-700">{{ memo.supplier.name if memo.supplier else "K Color Cosmetics" }}</strong> &bull;
-        তারিখ: {{ memo.memo_date or "১৯/১১/২৪" }}
+      <p class="text-xs md:text-sm text-slate-500 mt-1">
+        সরবরাহকারী: <strong class="text-slate-700 font-semibold">{{ memo.supplier.name if memo.supplier else "K Color Cosmetics" }}</strong> &bull;
+        তারিখ: <span class="font-medium text-slate-600">{{ memo.memo_date or "১৯/১১/২৪" }}</span>
       </p>
     </div>
 
-    <!-- Actions -->
-    <div class="flex items-center gap-2 w-full md:w-auto">
+    <!-- Actions (Desktop & Tablet) -->
+    <div class="flex items-center gap-2 flex-wrap w-full md:w-auto">
       {% if memo.status != 'APPROVED' %}
-      <button id="one-tap-approve-btn" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-lg shadow-sm text-sm transition-all flex items-center justify-center gap-2">
+      <!-- Save Draft Button -->
+      <button id="save-draft-btn" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-4 py-2.5 rounded-lg shadow-sm text-xs md:text-sm transition-all flex items-center justify-center gap-1.5 min-touch active:scale-95">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+        <span>ড্রাফট সংরক্ষণ করুন</span>
+      </button>
+
+      <!-- One-Tap Approve Button -->
+      <button id="one-tap-approve-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-lg shadow-sm text-xs md:text-sm transition-all flex items-center justify-center gap-1.5 min-touch active:scale-95">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-        <span data-i18n="one_tap_approve">এক ট্যাপে অনুমোদন ও স্টক আপডেট</span>
+        <span data-i18n="one_tap_approve">অনুমোদন ও স্টক আপডেট</span>
       </button>
       {% endif %}
 
-      <a href="/api/v1/memos/{{ memo.id }}/pdf" target="_blank" class="bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-semibold px-3 py-2 rounded-lg text-xs transition-all flex items-center gap-1">
-        <span>পিডিএফ ইনভয়েস</span>
+      <!-- PDF Download -->
+      <a href="/api/v1/memos/{{ memo.id }}/pdf" target="_blank" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold px-3 py-2.5 rounded-lg text-xs transition-all flex items-center gap-1 min-touch">
+        <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <span>পিডিএফ</span>
       </a>
 
-      <a href="/api/v1/memos/{{ memo.id }}/excel" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold px-3 py-2 rounded-lg text-xs transition-all flex items-center gap-1">
+      <!-- Excel Download -->
+      <a href="/api/v1/memos/{{ memo.id }}/excel" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold px-3 py-2.5 rounded-lg text-xs transition-all flex items-center gap-1 min-touch">
+        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         <span>এক্সেল</span>
       </a>
+
+      {% if memo.status != 'APPROVED' %}
+      <!-- Delete Memo Button -->
+      <button id="delete-memo-btn" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold px-3 py-2.5 rounded-lg text-xs transition-all flex items-center gap-1 min-touch ml-auto md:ml-0" title="মেমো ডিলিট করুন">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        <span>মুছুন</span>
+      </button>
+      {% endif %}
     </div>
   </div>
 
   <!-- Quality / Mismatch Warnings -->
   {% if memo.total_mismatch_flag %}
-  <div id="total-mismatch-banner" class="bg-amber-50 border border-amber-300 text-amber-800 p-3 rounded-lg text-xs flex items-center gap-2">
-    <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-    <span>
-      সতর্কতা: পণ্যগুলোর মোট যোগফল (৳{{ "%.2f"|format(memo.extracted_total or 0) }}) এবং কাগজে লেখা মোট (৳{{ "%.2f"|format(memo.written_total or 0) }}) মিলছে না। অনুগ্রহ করে নিচের দর ও পরিমাণ যাচাই করুন।
+  <div id="total-mismatch-banner" class="bg-amber-50 border border-amber-300 text-amber-900 p-3.5 rounded-xl text-xs flex items-center gap-2.5 shadow-xs">
+    <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    <span class="leading-relaxed">
+      <strong>হিসাব সতর্কীকরণ:</strong> লাইনগুলোর মোট যোগফল (৳{{ "%.2f"|format(memo.extracted_total or 0) }}) এবং কাগজে লেখা সর্বমোট (৳{{ "%.2f"|format(memo.written_total or 0) }}) মিলছে না। অনুগ্রহ করে নিচের আইটেমগুলোর পরিমাণ ও দর যাচাই করে <strong>"ড্রাফট সংরক্ষণ"</strong> করুন।
     </span>
   </div>
   {% endif %}
+
+  <!-- Mobile Segmented View Control (<lg screens) -->
+  <div class="lg:hidden flex items-center bg-slate-200 p-1 rounded-xl">
+    <button type="button" id="mobile-tab-table-btn" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white text-teal-800 shadow-xs transition-all">
+      পণ্যের তালিকা ও দর ({{ memo.lines|length }})
+    </button>
+    <button type="button" id="mobile-tab-photo-btn" class="flex-1 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-all">
+      আসল মেমোর ছবি
+    </button>
+  </div>
 
   <!-- Main Split Layout (Photo beside Table) -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
     <!-- Column 1: Memo Photo with SVG Bounding Box Overlay -->
-    <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm sticky top-16">
-      <div class="text-xs font-semibold text-slate-500 mb-2 flex items-center justify-between">
-        <span>আসল মেমোর ছবি (বক্সে ক্লিক করে লাইনে যান)</span>
-        <span class="text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">সবুজ: অটো-ম্যাচ &bull; হলুদ: সন্দেহজনক</span>
+    <div id="photo-column" class="hidden lg:block bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm sticky top-16">
+      <div class="text-xs font-bold text-slate-600 mb-2.5 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>আসল মেমো (বক্সে ট্যাপ করে লাইনে যান)</span>
+        </span>
+        <div class="flex items-center gap-2 text-[10px]">
+          <span class="flex items-center gap-1 text-emerald-700 font-bold"><span class="w-2.5 h-2.5 bg-emerald-500 rounded-sm inline-block"></span> অটো-ম্যাচ</span>
+          <span class="flex items-center gap-1 text-amber-700 font-bold"><span class="w-2.5 h-2.5 bg-amber-500 rounded-sm inline-block"></span> সতর্কীকরণ</span>
+        </div>
       </div>
 
-      <div class="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-900 flex justify-center">
+      <div class="relative border border-slate-200 rounded-xl overflow-hidden bg-slate-900 flex justify-center shadow-inner">
         <img id="review-memo-img" src="/api/v1/memos/{{ memo.id }}/image" alt="Memo Photo" class="w-full h-auto object-contain max-h-[75vh]">
         <!-- Interactive SVG Overlay for BBoxes -->
         <svg id="bbox-svg-overlay" class="absolute inset-0 w-full h-full pointer-events-auto"></svg>
       </div>
     </div>
 
-    <!-- Column 2: Editable Form Rows -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-        <h2 class="text-sm font-bold text-slate-800" data-i18n="line_items">এক্সট্রাক্ট করা পণ্যের তালিকা</h2>
-        <div class="text-xs font-semibold text-slate-600">
-          মোট: <span id="review-grand-total" class="text-teal-700 font-bold text-sm">৳{{ "%.2f"|format(memo.extracted_total or 0) }}</span>
+    <!-- Column 2: Editable Form Rows & CRUD Line Items -->
+    <div id="table-column" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
+      
+      <div class="px-4 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-bold text-slate-800" data-i18n="line_items">এক্সট্রাক্ট করা পণ্যের তালিকা</h2>
+          <div class="text-[11px] text-slate-500">দর বা পরিমাণ পরিবর্তন করলে অটো-হিসাব হবে</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- Add New Line Button -->
+          <button type="button" id="add-table-line-btn" class="bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shadow-xs transition-all active:scale-95">
+            <span>+</span> নতুন লাইন
+          </button>
+          <div class="text-xs font-bold bg-white px-2.5 py-1 rounded-md border border-slate-200">
+            সর্বমোট: <span id="review-grand-total" class="text-teal-800 font-extrabold text-sm ml-1">৳{{ "%.2f"|format(memo.extracted_total or 0) }}</span>
+          </div>
         </div>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs border-collapse">
           <thead>
-            <tr class="bg-slate-100/75 text-slate-600 border-b border-slate-200">
-              <th class="p-2.5 w-8">#</th>
-              <th class="p-2.5 min-w-[140px]">পণ্যের বিবরণ</th>
-              <th class="p-2.5 min-w-[70px]">ভ্যারিয়েন্ট</th>
+            <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
+              <th class="p-2.5 w-7 text-center">#</th>
+              <th class="p-2.5 min-w-[140px]">পণ্যের নাম ও ক্যাটালগ লিঙ্ক</th>
+              <th class="p-2.5 w-16 text-center">সাইজ/শেড</th>
               <th class="p-2.5 w-16 text-right">পরিমাণ</th>
               <th class="p-2.5 w-20 text-right">দর (৳)</th>
               <th class="p-2.5 w-24 text-right">মোট (৳)</th>
+              <th class="p-2.5 w-10 text-center">মুছুন</th>
             </tr>
           </thead>
           <tbody id="lines-table-body" class="divide-y divide-slate-100">
@@ -97,18 +143,19 @@
                 data-line-id="{{ line.id }}"
                 data-line-idx="{{ loop.index0 }}">
               
-              <td class="p-2 text-slate-500 font-semibold">{{ line.line_number }}</td>
+              <td class="p-2 text-slate-500 font-bold text-center">{{ line.line_number }}</td>
               
-              <td class="p-2">
-                <input type="text" class="line-name-input w-full p-1.5 border border-slate-300 rounded font-medium focus:ring-1 focus:ring-teal-500" value="{{ line.parsed_name or line.raw_text }}">
-                <div class="text-[10px] text-slate-400 mt-0.5 truncate">কাগজে লেখা: {{ line.raw_text }}</div>
+              <td class="p-2 space-y-1">
+                <input type="text" class="line-name-input w-full p-2 border border-slate-300 rounded font-bold text-xs focus:ring-1 focus:ring-teal-500" value="{{ line.parsed_name or line.raw_text }}">
+                <div class="text-[10px] text-slate-400 truncate">লেখা: {{ line.raw_text }}</div>
                 
                 <!-- Catalog Match Dropdown / Suggestions -->
                 <div class="mt-1">
-                  <select class="line-variant-select w-full text-[11px] p-1 border border-slate-200 rounded bg-slate-50">
+                  <select class="line-variant-select w-full text-[11px] p-1.5 border border-slate-200 rounded bg-slate-50 focus:ring-1 focus:ring-teal-500">
+                    <option value="">-- ক্যাটালগ লিংক নেই --</option>
                     {% for v in variants %}
                     <option value="{{ v.id }}" {{ 'selected' if line.matched_variant_id == v.id else '' }}>
-                      {{ v.product.name }} ({{ v.size_value or '' }}{{ v.size_unit or '' }} {{ v.variant_code or '' }}) - স্টক: {{ v.current_stock }}
+                      {{ v.product.name }} ({{ v.size_value or '' }}{{ v.size_unit or '' }} {{ v.variant_code or '' }}) - বর্তমান স্টক: {{ v.current_stock }}
                     </option>
                     {% endfor %}
                   </select>
@@ -116,19 +163,25 @@
               </td>
 
               <td class="p-2">
-                <input type="text" class="line-variant-input w-full p-1.5 border border-slate-300 rounded text-center" value="{{ line.parsed_variant or '' }}" placeholder="-">
+                <input type="text" class="line-variant-input w-full p-2 border border-slate-300 rounded text-center text-xs" value="{{ line.parsed_variant or '' }}" placeholder="-">
               </td>
 
               <td class="p-2">
-                <input type="number" step="0.5" class="line-qty-input w-full p-1.5 border border-slate-300 rounded text-right font-semibold" value="{{ line.parsed_qty }}">
+                <input type="number" step="0.5" class="line-qty-input w-full p-2 border border-slate-300 rounded text-right font-bold text-xs" value="{{ line.parsed_qty }}">
               </td>
 
               <td class="p-2">
-                <input type="number" step="1" class="line-price-input w-full p-1.5 border border-slate-300 rounded text-right font-semibold" value="{{ line.parsed_unit_price or 0 }}">
+                <input type="number" step="1" class="line-price-input w-full p-2 border border-slate-300 rounded text-right font-bold text-xs" value="{{ line.parsed_unit_price or 0 }}">
               </td>
 
               <td class="p-2">
-                <input type="number" step="1" class="line-total-input w-full p-1.5 border border-slate-300 rounded text-right font-bold text-teal-700 bg-slate-50" value="{{ line.parsed_line_total or 0 }}">
+                <input type="number" step="1" class="line-total-input w-full p-2 border border-slate-200 rounded text-right font-extrabold text-teal-800 bg-slate-50 text-xs" value="{{ line.parsed_line_total or 0 }}">
+              </td>
+
+              <td class="p-2 text-center">
+                <button type="button" class="delete-line-row-btn text-slate-400 hover:text-rose-600 p-1.5 transition-colors" title="লাইন মুছুন">
+                  ✕
+                </button>
               </td>
 
             </tr>
@@ -137,28 +190,51 @@
         </table>
       </div>
 
+      <!-- Table Bottom Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="text-xs text-slate-500">
+          কাগজে লেখা মোট: <strong class="text-slate-700">৳{{ "%.2f"|format(memo.written_total or 0) }}</strong>
+        </div>
+
+        {% if memo.status != 'APPROVED' %}
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <button id="bottom-save-draft-btn" class="flex-1 sm:flex-none bg-teal-700 hover:bg-teal-800 text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow-xs min-touch">
+            ড্রাফট সংরক্ষণ
+          </button>
+          <button id="bottom-approve-btn" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow-xs min-touch">
+            অনুমোদন করুন
+          </button>
+        </div>
+        {% endif %}
+      </div>
+
     </div>
 
   </div>
 
   <!-- Commit Success Modal -->
-  <div id="commit-success-modal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 text-center space-y-4 shadow-xl">
-      <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+  <div id="commit-success-modal" class="fixed inset-0 bg-slate-900/60 modal-backdrop flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl modal-content">
+      <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
       </div>
 
-      <h3 class="text-lg font-bold text-slate-800">মেমো সফলভাবে অনুমোদিত হয়েছে!</h3>
-      <p class="text-xs text-slate-500">স্টক লেজারে পণ্যগুলো যুক্ত করা হয়েছে এবং সরবরাহকারী হিস্ট্রি আপডেট করা হয়েছে।</p>
+      <h3 class="text-lg md:text-xl font-bold text-slate-800">মেমো সফলভাবে অনুমোদিত হয়েছে!</h3>
+      <p class="text-xs text-slate-500 leading-relaxed">
+        স্টক লেজারে পণ্যগুলোর পরিমাণ যোগ করা হয়েছে এবং সরবরাহকারী হিস্ট্রি আপডেট করা হয়েছে।
+      </p>
 
-      <div class="pt-2 flex flex-col gap-2">
-        <a href="/api/v1/memos/{{ memo.id }}/pdf" target="_blank" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2.5 rounded-lg text-sm transition-all">
+      <div class="pt-3 flex flex-col gap-2.5">
+        <a href="/api/v1/memos/{{ memo.id }}/pdf" target="_blank" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold py-3 rounded-lg text-sm transition-all shadow-sm">
           পিডিএফ ইনভয়েস ডাউনলোড করুন
         </a>
-        <a id="whatsapp-share-btn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2">
+        <a id="whatsapp-share-btn" href="#" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2 shadow-sm">
           <span>হোয়াটসঅ্যাপে চালান পাঠান</span>
         </a>
-        <a href="/dashboard" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-sm transition-all">
+        <a href="/stock" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg text-sm transition-all">
+          স্টক লেজার দেখুন
+        </a>
+        <a href="/dashboard" class="w-full text-xs text-slate-500 hover:text-slate-800 py-1 transition-all">
           ড্যাশবোর্ডে ফিরে যান
         </a>
       </div>
@@ -180,5 +256,31 @@
         waBtn.href = data.whatsapp_url;
       }
     });
+
+  // Mobile Segmented Switcher Logic
+  const tabTableBtn = document.getElementById('mobile-tab-table-btn');
+  const tabPhotoBtn = document.getElementById('mobile-tab-photo-btn');
+  const photoCol = document.getElementById('photo-column');
+  const tableCol = document.getElementById('table-column');
+
+  if (tabTableBtn && tabPhotoBtn) {
+    tabTableBtn.addEventListener('click', () => {
+      tabTableBtn.classList.add('bg-white', 'text-teal-800', 'shadow-xs');
+      tabTableBtn.classList.remove('text-slate-600');
+      tabPhotoBtn.classList.remove('bg-white', 'text-teal-800', 'shadow-xs');
+      tabPhotoBtn.classList.add('text-slate-600');
+      tableCol.classList.remove('hidden');
+      photoCol.classList.add('hidden');
+    });
+
+    tabPhotoBtn.addEventListener('click', () => {
+      tabPhotoBtn.classList.add('bg-white', 'text-teal-800', 'shadow-xs');
+      tabPhotoBtn.classList.remove('text-slate-600');
+      tabTableBtn.classList.remove('bg-white', 'text-teal-800', 'shadow-xs');
+      tabTableBtn.classList.add('text-slate-600');
+      photoCol.classList.remove('hidden');
+      tableCol.classList.add('hidden');
+    });
+  }
 </script>
 {% endblock %}

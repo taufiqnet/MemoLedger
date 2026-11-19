@@ -2,6 +2,7 @@ import io
 import re
 import uuid
 import hashlib
+from decimal import Decimal
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -15,6 +16,10 @@ from app.schemas.memo import (
     MemoUploadResponse,
     MemoDetailResponse,
     MemoCommitRequest,
+    MemoLineCreate,
+    MemoLineUpdate,
+    MemoLinesSaveDraftRequest,
+    MemoManualCreate,
 )
 from app.services.storage import storage_service
 from app.services.ledger.ledger_service import LedgerService
@@ -192,6 +197,215 @@ def get_memo_image(
     
     image_bytes = storage_service.get_bytes(memo.image_s3_key)
     return Response(content=image_bytes, media_type="image/jpeg")
+
+
+@router.post("/manual", response_model=MemoUploadResponse, status_code=status.HTTP_201_CREATED)
+def create_manual_memo(
+    memo_in: MemoManualCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Creates a manual memo with itemized lines without requiring camera/OCR.
+    """
+    memo_hash = hashlib.sha256(f"manual_{current_user.tenant_id}_{uuid.uuid4()}".encode()).hexdigest()
+    memo = Memo(
+        tenant_id=current_user.tenant_id,
+        supplier_id=memo_in.supplier_id,
+        memo_number=memo_in.memo_number or f"M-{uuid.uuid4().hex[:6].upper()}",
+        memo_date=memo_in.memo_date,
+        image_s3_key="memos/manual_entry.png",
+        image_hash=memo_hash,
+        status="REVIEW_REQUIRED"
+    )
+    db.add(memo)
+    db.flush()
+
+    total_sum = Decimal("0.00")
+    for idx, l in enumerate(memo_in.lines, 1):
+        line_total = l.parsed_line_total or (l.parsed_qty * l.parsed_unit_price)
+        total_sum += line_total
+        line = MemoLine(
+            memo_id=memo.id,
+            line_number=idx,
+            raw_text=l.raw_text or f"{l.parsed_name} - {l.parsed_qty} - {l.parsed_unit_price}",
+            parsed_name=l.parsed_name,
+            parsed_variant=l.parsed_variant,
+            parsed_qty=l.parsed_qty,
+            parsed_unit=l.parsed_unit or "piece",
+            parsed_unit_price=l.parsed_unit_price,
+            parsed_line_total=line_total,
+            matched_variant_id=l.matched_variant_id,
+            status="AUTO_MATCHED" if l.matched_variant_id else "NEEDS_REVIEW"
+        )
+        db.add(line)
+
+    memo.extracted_total = total_sum
+    memo.written_total = total_sum
+    db.commit()
+    db.refresh(memo)
+
+    return MemoUploadResponse(
+        memo_id=memo.id,
+        status=memo.status,
+        message="Manual memo created successfully."
+    )
+
+
+@router.put("/{memo_id}/lines")
+def save_memo_lines_draft(
+    memo_id: uuid.UUID,
+    draft_data: MemoLinesSaveDraftRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Saves draft updates to memo lines and totals without committing to stock ledger.
+    """
+    memo = db.query(Memo).filter(
+        Memo.id == memo_id,
+        Memo.tenant_id == current_user.tenant_id
+    ).first()
+    if not memo:
+        raise HTTPException(status_code=404, detail="Memo not found")
+
+    total_sum = Decimal("0.00")
+    for l_update in draft_data.lines:
+        line = None
+        if l_update.id:
+            line = db.query(MemoLine).filter(MemoLine.id == l_update.id, MemoLine.memo_id == memo.id).first()
+        
+        if line:
+            if l_update.parsed_name is not None:
+                line.parsed_name = l_update.parsed_name
+            if l_update.parsed_variant is not None:
+                line.parsed_variant = l_update.parsed_variant
+            if l_update.parsed_qty is not None:
+                line.parsed_qty = l_update.parsed_qty
+            if l_update.parsed_unit_price is not None:
+                line.parsed_unit_price = l_update.parsed_unit_price
+            if l_update.parsed_line_total is not None:
+                line.parsed_line_total = l_update.parsed_line_total
+            else:
+                line.parsed_line_total = line.parsed_qty * (line.parsed_unit_price or Decimal("0.00"))
+            if l_update.matched_variant_id is not None:
+                line.matched_variant_id = l_update.matched_variant_id
+            total_sum += line.parsed_line_total
+        else:
+            # New line item
+            line_tot = l_update.parsed_line_total or (l_update.parsed_qty * l_update.parsed_unit_price)
+            new_line = MemoLine(
+                memo_id=memo.id,
+                line_number=l_update.line_number or (len(memo.lines) + 1),
+                raw_text=l_update.raw_text or f"{l_update.parsed_name}",
+                parsed_name=l_update.parsed_name,
+                parsed_variant=l_update.parsed_variant,
+                parsed_qty=l_update.parsed_qty,
+                parsed_unit=l_update.parsed_unit or "piece",
+                parsed_unit_price=l_update.parsed_unit_price,
+                parsed_line_total=line_tot,
+                matched_variant_id=l_update.matched_variant_id,
+                status=l_update.status or "AUTO_MATCHED"
+            )
+            db.add(new_line)
+            total_sum += line_tot
+
+    memo.extracted_total = total_sum
+    if draft_data.written_total is not None:
+        memo.written_total = draft_data.written_total
+    
+    # Recalculate mismatch
+    if memo.written_total is not None and abs(float(memo.extracted_total) - float(memo.written_total)) > 0.5:
+        memo.total_mismatch_flag = True
+    else:
+        memo.total_mismatch_flag = False
+
+    db.commit()
+    return {
+        "status": "SUCCESS",
+        "message": "Memo draft lines saved successfully.",
+        "extracted_total": float(memo.extracted_total),
+        "total_mismatch_flag": memo.total_mismatch_flag
+    }
+
+
+@router.post("/{memo_id}/lines")
+def add_memo_line(
+    memo_id: uuid.UUID,
+    line_in: MemoLineCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    memo = db.query(Memo).filter(
+        Memo.id == memo_id,
+        Memo.tenant_id == current_user.tenant_id
+    ).first()
+    if not memo:
+        raise HTTPException(status_code=404, detail="Memo not found")
+
+    line_tot = line_in.parsed_line_total or (line_in.parsed_qty * line_in.parsed_unit_price)
+    next_num = len(memo.lines) + 1
+    new_line = MemoLine(
+        memo_id=memo.id,
+        line_number=next_num,
+        raw_text=line_in.raw_text or f"{line_in.parsed_name} - {line_in.parsed_qty} - {line_in.parsed_unit_price}",
+        parsed_name=line_in.parsed_name,
+        parsed_variant=line_in.parsed_variant,
+        parsed_qty=line_in.parsed_qty,
+        parsed_unit=line_in.parsed_unit or "piece",
+        parsed_unit_price=line_in.parsed_unit_price,
+        parsed_line_total=line_tot,
+        matched_variant_id=line_in.matched_variant_id,
+        status="AUTO_MATCHED" if line_in.matched_variant_id else "NEEDS_REVIEW"
+    )
+    db.add(new_line)
+    memo.extracted_total = (memo.extracted_total or Decimal("0.00")) + line_tot
+    db.commit()
+    db.refresh(new_line)
+    return {
+        "status": "SUCCESS",
+        "line_id": str(new_line.id),
+        "line_number": new_line.line_number,
+        "message": "Line item added."
+    }
+
+
+@router.delete("/{memo_id}/lines/{line_id}")
+def delete_memo_line(
+    memo_id: uuid.UUID,
+    line_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    line = db.query(MemoLine).filter(MemoLine.id == line_id, MemoLine.memo_id == memo_id).first()
+    if not line:
+        raise HTTPException(status_code=404, detail="Memo line not found")
+
+    memo = line.memo
+    memo.extracted_total = max(Decimal("0.00"), (memo.extracted_total or Decimal("0.00")) - (line.parsed_line_total or Decimal("0.00")))
+    db.delete(line)
+    db.commit()
+    return {"status": "SUCCESS", "message": "Line deleted.", "extracted_total": float(memo.extracted_total)}
+
+
+@router.delete("/{memo_id}", status_code=status.HTTP_200_OK)
+def delete_memo(
+    memo_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    memo = db.query(Memo).filter(
+        Memo.id == memo_id,
+        Memo.tenant_id == current_user.tenant_id
+    ).first()
+    if not memo:
+        raise HTTPException(status_code=404, detail="Memo not found")
+    if memo.status == "APPROVED":
+        raise HTTPException(status_code=400, detail="Cannot delete an already approved memo that updated inventory.")
+
+    db.delete(memo)
+    db.commit()
+    return {"status": "SUCCESS", "message": "Memo deleted successfully."}
 
 
 @router.post("/{memo_id}/commit")

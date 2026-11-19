@@ -14,7 +14,17 @@ class ProductVariantBase(BaseModel):
 
 
 class ProductVariantCreate(ProductVariantBase):
-    pass
+    initial_stock: Decimal = Decimal("0.00")
+
+
+class ProductVariantUpdate(BaseModel):
+    sku: Optional[str] = None
+    size_value: Optional[str] = None
+    size_unit: Optional[str] = None
+    variant_code: Optional[str] = None
+    cost_price: Optional[Decimal] = None
+    retail_price: Optional[Decimal] = None
+    current_stock: Optional[Decimal] = None
 
 
 class ProductVariantResponse(ProductVariantBase):
@@ -37,6 +47,13 @@ class ProductCreate(ProductBase):
     variants: Optional[List[ProductVariantCreate]] = None
 
 
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    brand: Optional[str] = None
+    product_type: Optional[str] = None
+    description: Optional[str] = None
+
+
 class ProductResponse(ProductBase):
     id: uuid.UUID
     tenant_id: uuid.UUID
@@ -53,12 +70,20 @@ class SupplierBase(BaseModel):
 
 
 class SupplierCreate(SupplierBase):
-    pass
+    abbreviations: Optional[dict] = None
+
+
+class SupplierUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    abbreviations: Optional[dict] = None
 
 
 class SupplierResponse(SupplierBase):
     id: uuid.UUID
     tenant_id: uuid.UUID
+    abbreviations: Optional[dict] = None
 
     class Config:
         from_attributes = True

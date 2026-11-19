@@ -1,50 +1,178 @@
 {% extends "base.html" %}
 
-{% block title %}সরবরাহকারী - MemoLedger{% endblock %}
+{% block title %}সরবরাহকারী ডিরেক্টরি - MemoLedger{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-  <div class="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+  <!-- Header Banner & Action Bar -->
+  <div class="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
     <div>
-      <h1 class="text-xl font-bold text-slate-800" data-i18n="suppliers">সরবরাহকারী তালিকা</h1>
-      <p class="text-xs text-slate-500 mt-0.5">পাইকারী ও অনলাইন বিক্রেতাদের ডিরেক্টরি এবং তাদের প্রোফাইল</p>
+      <h1 class="text-xl md:text-2xl font-bold text-slate-800" data-i18n="suppliers">সরবরাহকারী তালিকা ও প্রোফাইল</h1>
+      <p class="text-xs md:text-sm text-slate-500 mt-1">পাইকারী ও অনলাইন বিক্রেতাদের ডিরেক্টরি এবং তাদের বিশেষ শর্টহ্যান্ড সংকেত</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Search Input -->
+      <div class="relative w-full sm:w-64">
+        <input type="text" id="supplier-search-input" placeholder="সরবরাহকারী বা ফোন নম্বর..." class="w-full text-xs md:text-sm pl-8 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+        <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
+
+      <!-- Add Supplier Button -->
+      <button type="button" onclick="openAddSupplierModal()" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-4 py-2 rounded-lg text-xs md:text-sm shadow-sm transition-all flex items-center gap-1.5 min-touch active:scale-95 flex-shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <span>+ নতুন সরবরাহকারী</span>
+      </button>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <!-- Suppliers Grid -->
+  <div id="suppliers-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
     {% for s in suppliers %}
-    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
-      <div class="flex items-start justify-between">
-        <div>
-          <h2 class="text-base font-bold text-slate-800">{{ s.name }}</h2>
-          <div class="text-xs text-slate-500 mt-1">ফোন: {{ s.phone or "নেই" }}</div>
-          <div class="text-xs text-slate-500">ঠিকানা: {{ s.address or "নেই" }}</div>
+    <div class="supplier-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between space-y-4"
+         data-name="{{ s.name|lower }}"
+         data-phone="{{ s.phone or '' }}">
+      
+      <div>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">{{ s.name }}</h2>
+            <div class="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+              <span>{{ s.phone or "ফোন নম্বর নেই" }}</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              <span>{{ s.address or "ঠিকানা নেই" }}</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1">
+            <button type="button" 
+                    onclick='openEditSupplierModal("{{ s.id }}", "{{ s.name|escape }}", "{{ (s.phone or '')|escape }}", "{{ (s.address or '')|escape }}", {{ (s.profile.abbreviations or {})|tojson|safe }})'
+                    class="p-1.5 text-slate-400 hover:text-teal-700 hover:bg-slate-100 rounded transition-colors" title="সরবরাহকারী এডিট করুন">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button type="button" 
+                    onclick="deleteSupplier('{{ s.id }}', '{{ s.name|escape }}')"
+                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="সরবরাহকারী মুছুন">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
         </div>
-        <div class="text-right">
-          <span class="text-xs font-semibold bg-teal-50 text-teal-800 px-2.5 py-1 rounded-full">
-            {{ s.memos|length }} টি মেমো
+
+        <!-- Memos Count Badge -->
+        <div class="mt-2.5">
+          <span class="text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200 px-2.5 py-1 rounded-full inline-block">
+            {{ s.memos|length }} টি মেমো সংরক্ষিত
           </span>
         </div>
       </div>
 
+      <!-- Abbreviations Section -->
       {% if s.profile %}
-      <div class="border-t border-slate-100 pt-3 text-xs text-slate-600 space-y-1">
-        <div class="font-semibold text-slate-700">সংক্ষিপ্ত রূপ (Learned Abbreviations):</div>
+      <div class="border-t border-slate-100 pt-3 text-xs text-slate-600 space-y-1.5">
+        <div class="font-bold text-slate-700 flex items-center justify-between">
+          <span>সংক্ষিপ্ত রূপ (Learned Abbreviations):</span>
+          <span class="text-[10px] text-teal-700 font-normal">AI এই সংকেত মনে রাখে</span>
+        </div>
         <div class="flex flex-wrap gap-1.5 mt-1">
           {% for k, v in (s.profile.abbreviations or {}).items() %}
-          <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px]">
-            {{ k }} &rarr; {{ v }}
+          <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded text-[11px] font-medium">
+            <strong class="text-teal-800">{{ k }}</strong> &rarr; {{ v }}
           </span>
           {% else %}
-          <span class="text-slate-400">কোনো বিশেষ শর্টহ্যান্ড সংরক্ষিত নেই।</span>
+          <span class="text-slate-400 text-xs">কোনো বিশেষ শর্টহ্যান্ড সংরক্ষিত নেই।</span>
           {% endfor %}
         </div>
       </div>
       {% endif %}
+
     </div>
     {% endfor %}
   </div>
 
 </div>
+
+<!-- ================= 1. ADD SUPPLIER MODAL ================= -->
+<div id="add-supplier-modal" class="fixed inset-0 bg-slate-900/60 modal-backdrop flex items-center justify-center p-4 z-50 hidden">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl modal-content">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-base font-bold text-slate-800">নতুন সরবরাহকারী যোগ করুন</h3>
+      <button type="button" onclick="closeModal('add-supplier-modal')" class="text-slate-400 hover:text-slate-600 p-1 font-bold text-lg">✕</button>
+    </div>
+
+    <form id="add-supplier-form" class="space-y-3.5">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">সরবরাহকারীর নাম / দোকানের নাম *</label>
+        <input type="text" id="add-s-name" placeholder="যেমন: কে কালার কসমেটিক্স" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500" required>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">ফোন নম্বর</label>
+        <input type="text" id="add-s-phone" placeholder="যেমন: 01862021300" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">ঠিকানা / মার্কেট</label>
+        <input type="text" id="add-s-address" placeholder="যেমন: চকবাজার, ঢাকা" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">সংক্ষিপ্ত রূপ (কমা দিয়ে লিখুন, যেমন: Sun=Sunscreen, Vase=Vaseline)</label>
+        <input type="text" id="add-s-abbr" placeholder="Sun=Sunscreen, Vase=Vaseline" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2.5">
+        <button type="button" onclick="closeModal('add-supplier-modal')" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+          বাতিল
+        </button>
+        <button type="submit" id="save-supplier-btn" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-5 py-2.5 rounded-lg text-xs shadow-sm transition-all min-touch">
+          সরবরাহকারী সংরক্ষণ করুন (Save Supplier)
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= 2. EDIT SUPPLIER MODAL ================= -->
+<div id="edit-supplier-modal" class="fixed inset-0 bg-slate-900/60 modal-backdrop flex items-center justify-center p-4 z-50 hidden">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl modal-content">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-base font-bold text-slate-800">সরবরাহকারী তথ্য পরিবর্তন</h3>
+      <button type="button" onclick="closeModal('edit-supplier-modal')" class="text-slate-400 hover:text-slate-600 p-1 font-bold text-lg">✕</button>
+    </div>
+
+    <form id="edit-supplier-form" class="space-y-3.5">
+      <input type="hidden" id="edit-s-id">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">সরবরাহকারীর নাম *</label>
+        <input type="text" id="edit-s-name" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500" required>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">ফোন নম্বর</label>
+        <input type="text" id="edit-s-phone" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">ঠিকানা</label>
+        <input type="text" id="edit-s-address" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">সংক্ষিপ্ত রূপ (যেমন: Sun=Sunscreen, Cantor=Castor)</label>
+        <input type="text" id="edit-s-abbr" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2.5">
+        <button type="button" onclick="closeModal('edit-supplier-modal')" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+          বাতিল
+        </button>
+        <button type="submit" id="save-edit-supplier-btn" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-5 py-2.5 rounded-lg text-xs shadow-sm transition-all min-touch">
+          পরিবর্তন সংরক্ষণ করুন (Save Changes)
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/suppliers.js"></script>
 {% endblock %}

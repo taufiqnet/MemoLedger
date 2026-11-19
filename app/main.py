@@ -101,6 +101,8 @@ def upload_page(
     db: Session = Depends(get_db)
 ):
     suppliers = db.query(Supplier).filter(Supplier.tenant_id == tenant.id).all()
+    variants = db.query(ProductVariant).join(Product).filter(Product.tenant_id == tenant.id).all()
+    recent_memos = db.query(Memo).filter(Memo.tenant_id == tenant.id).order_by(desc(Memo.created_at)).limit(5).all()
     return templates.TemplateResponse(
         request=request,
         name="upload.html",
@@ -108,6 +110,8 @@ def upload_page(
             "user": current_user,
             "tenant": tenant,
             "suppliers": suppliers,
+            "variants": variants,
+            "recent_memos": recent_memos,
         }
     )
 

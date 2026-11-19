@@ -1,69 +1,251 @@
 {% extends "base.html" %}
 
-{% block title %}মেমো তুলুন - MemoLedger{% endblock %}
+{% block title %}মেমো তুলুন ও এন্ট্রি - MemoLedger{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto space-y-6">
+<div class="space-y-6">
 
-  <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-    <h1 class="text-xl font-bold text-slate-800" data-i18n="upload">মেমো আপলোড ও ছবি তুলুন</h1>
-    <p class="text-xs text-slate-500 mt-1">হাতে লেখা বা প্রিন্ট করা মেমোর ছবি তুলুন। ক্যামেরা সরাসরি ব্যবহার করতে পারেন।</p>
-
-    <!-- Upload and Camera Section -->
-    <div class="mt-6 border-2 border-dashed border-teal-300 rounded-xl p-6 text-center bg-teal-50/50 hover:bg-teal-50 transition-all cursor-pointer" onclick="document.getElementById('camera-file-input').click()">
-      <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="hidden">
-      
-      <div class="w-14 h-14 bg-teal-700 text-white rounded-full flex items-center justify-center mx-auto shadow-md">
-        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-      </div>
-
-      <div class="mt-3 font-semibold text-slate-800 text-sm" data-i18n="take_photo">ছবি তুলুন বা গ্যালারি থেকে সিলেক্ট করুন</div>
-      <div class="text-xs text-slate-500 mt-1">JPEG, PNG, WebP (সর্বোচ্চ ১৫ মেগাবাইট)</div>
+  <!-- Header Banner -->
+  <div class="bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl md:text-2xl font-bold text-slate-800" data-i18n="upload">মেমো আপলোড ও নতুন এন্ট্রি</h1>
+      <p class="text-xs md:text-sm text-slate-500 mt-1">হাতে লেখা বা প্রিন্ট করা মেমোর ছবি তুলুন অথবা সরাসরি তথ্য টাইপ করে সেভ করুন।</p>
     </div>
 
-    <!-- Quick Load Sample Memo Button -->
-    <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-      <span class="text-xs text-slate-500">টেস্ট করতে চান?</span>
-      <button type="button" id="load-sample-btn" class="text-xs bg-slate-100 hover:bg-teal-100 text-teal-800 font-semibold px-3 py-1.5 rounded-md border border-slate-200 transition-all">
-        &bull; রিয়েল K Color Cosmetics স্যাম্পল লোড করুন
+    <!-- Mode Switcher Tabs -->
+    <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 self-start sm:self-auto">
+      <button type="button" id="tab-ocr-btn" class="px-3.5 py-1.5 rounded-md text-xs font-bold transition-all bg-white text-teal-800 shadow-xs">
+        ক্যামেরা ও স্ক্যান
+      </button>
+      <button type="button" id="tab-manual-btn" class="px-3.5 py-1.5 rounded-md text-xs font-semibold text-slate-600 hover:text-slate-800 transition-all">
+        সরাসরি মেমো এন্ট্রি
       </button>
     </div>
+  </div>
 
-    <!-- Canvas Preview & Crop/Rotate Section -->
-    <div id="preview-container" class="mt-6 hidden space-y-4">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-semibold text-slate-700">ছবি প্রিভিউ ও সঠিক এঙ্গেল করুন:</span>
-        <div class="flex items-center gap-2">
-          <button type="button" id="rotate-left-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-2.5 py-1 rounded font-medium border border-slate-300">
-            ↺ ৯০° বামে
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    
+    <!-- Left 2 Columns: Main Entry & Capture Area -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- ================= MODE 1: CAMERA & OCR CAPTURE ================= -->
+      <div id="ocr-mode-container" class="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+        
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">ছবি তুলুন বা আপলোড করুন</h2>
+            <p class="text-xs text-slate-500">স্বয়ংক্রিয়ভাবে বাংলা/ইংরেজি ও বাংলা সংখ্যা শনাক্ত হবে</p>
+          </div>
+          <button type="button" id="load-sample-btn" class="text-xs bg-teal-50 hover:bg-teal-100 text-teal-800 font-semibold px-2.5 py-1.5 rounded-md border border-teal-200 transition-all">
+            &bull; K Color স্যাম্পল লোড করুন
           </button>
-          <button type="button" id="rotate-right-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-2.5 py-1 rounded font-medium border border-slate-300">
-            ↻ ৯০° ডানে
-          </button>
+        </div>
+
+        <!-- Upload Dropzone / Camera Trigger -->
+        <div id="dropzone-box" class="border-2 border-dashed border-teal-300 rounded-xl p-8 text-center bg-teal-50/40 hover:bg-teal-50/70 transition-all cursor-pointer min-touch flex flex-col items-center justify-center">
+          <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="hidden">
+          
+          <div class="w-16 h-16 bg-teal-700 text-white rounded-full flex items-center justify-center shadow-md active:scale-95 transition-transform">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </div>
+
+          <div class="mt-4 font-bold text-slate-800 text-sm md:text-base" data-i18n="take_photo">ক্যামেরা চালু করুন অথবা ছবি সিলেক্ট করুন</div>
+          <div class="text-xs text-slate-500 mt-1">JPEG, PNG, WebP (সর্বোচ্চ ১৫ মেগাবাইট)</div>
+        </div>
+
+        <!-- Canvas Preview & Rotate Controls -->
+        <div id="preview-container" class="hidden space-y-4 pt-2">
+          <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+            <span class="text-xs font-bold text-slate-700">ছবি প্রিভিউ ও সঠিক এঙ্গেল করুন:</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="rotate-left-btn" class="bg-white hover:bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-md font-semibold border border-slate-300 shadow-xs flex items-center gap-1 min-touch">
+                <span>↺</span> ৯০° বামে
+              </button>
+              <button type="button" id="rotate-right-btn" class="bg-white hover:bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-md font-semibold border border-slate-300 shadow-xs flex items-center gap-1 min-touch">
+                <span>↻</span> ৯০° ডানে
+              </button>
+            </div>
+          </div>
+
+          <div class="border border-slate-300 rounded-xl overflow-hidden bg-slate-900 flex justify-center p-2 shadow-inner">
+            <canvas id="preview-canvas" class="max-h-[60vh] max-w-full object-contain"></canvas>
+          </div>
+
+          <form id="upload-form" class="space-y-4 pt-2">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">সরবরাহকারী নির্বাচন (ঐচ্ছিক):</label>
+              <select id="supplier-select" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                <option value="">স্বয়ংক্রিয়ভাবে মেমো থেকে শনাক্ত করুন</option>
+                {% for s in suppliers %}
+                <option value="{{ s.id }}">{{ s.name }} ({{ s.phone or 'ফোন নেই' }})</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <button type="submit" id="upload-submit-btn" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold py-3.5 rounded-lg shadow-md transition-all text-sm flex items-center justify-center gap-2 min-touch active:scale-98">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span data-i18n="process_memo">মেমো প্রসেস ও এক্সট্রাক্ট করুন &rarr;</span>
+            </button>
+
+            <div id="upload-status-msg" class="text-xs text-center font-bold text-teal-700 hidden p-2 bg-teal-50 rounded-lg border border-teal-200"></div>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- ================= MODE 2: MANUAL MEMO ENTRY ================= -->
+      <div id="manual-mode-container" class="hidden bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+        
+        <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">সরাসরি নতুন মেমো এন্ট্রি</h2>
+            <p class="text-xs text-slate-500">ছবি ছাড়া সরাসরি চালান বা ক্যাশ মেমো টাইপ করে সংরক্ষণ করুন</p>
+          </div>
+          <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded font-medium">ম্যানুয়াল এন্ট্রি</span>
+        </div>
+
+        <form id="manual-memo-form" class="space-y-4">
+          <!-- Top Form Fields -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">সরবরাহকারী *</label>
+              <select id="manual-supplier-id" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg bg-white focus:ring-1 focus:ring-teal-500" required>
+                <option value="">সরবরাহকারী নির্বাচন করুন</option>
+                {% for s in suppliers %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">মেমো নং</label>
+              <input type="text" id="manual-memo-number" placeholder="যেমন: #3508" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">তারিখ</label>
+              <input type="text" id="manual-memo-date" placeholder="যেমন: ১৯/১১/২৪" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
+            </div>
+          </div>
+
+          <!-- Dynamic Line Items Container -->
+          <div class="border border-slate-200 rounded-xl overflow-hidden mt-4">
+            <div class="bg-slate-50 p-3 border-b border-slate-200 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-700">পণ্যের তালিকা (Line Items)</span>
+              <button type="button" id="add-manual-line-btn" class="bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-1 shadow-xs transition-all active:scale-95">
+                <span>+</span> নতুন লাইন যোগ
+              </button>
+            </div>
+
+            <!-- Table for Desktop, Cards for Mobile -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                    <th class="p-2.5 min-w-[150px]">পণ্যের নাম *</th>
+                    <th class="p-2.5 w-24">সাইজ / শেড</th>
+                    <th class="p-2.5 w-20 text-right">পরিমাণ *</th>
+                    <th class="p-2.5 w-24 text-right">দর (৳) *</th>
+                    <th class="p-2.5 w-24 text-right">মোট (৳)</th>
+                    <th class="p-2.5 w-10 text-center">মুছুন</th>
+                  </tr>
+                </thead>
+                <tbody id="manual-lines-tbody" class="divide-y divide-slate-100">
+                  <!-- Initial 2 rows -->
+                  <tr class="manual-line-row">
+                    <td class="p-2">
+                      <input type="text" class="manual-line-name w-full p-2 border border-slate-300 rounded text-xs font-medium focus:ring-1 focus:ring-teal-500" placeholder="যেমন: Sunscreen 625ml" required>
+                    </td>
+                    <td class="p-2">
+                      <input type="text" class="manual-line-variant w-full p-2 border border-slate-300 rounded text-xs text-center" placeholder="SH">
+                    </td>
+                    <td class="p-2">
+                      <input type="number" step="1" class="manual-line-qty w-full p-2 border border-slate-300 rounded text-xs text-right font-bold" value="1" required>
+                    </td>
+                    <td class="p-2">
+                      <input type="number" step="1" class="manual-line-price w-full p-2 border border-slate-300 rounded text-xs text-right font-bold" value="0" required>
+                    </td>
+                    <td class="p-2">
+                      <input type="number" step="1" class="manual-line-total w-full p-2 border border-slate-200 rounded text-xs text-right font-bold bg-slate-50 text-teal-700" value="0" readonly>
+                    </td>
+                    <td class="p-2 text-center">
+                      <button type="button" class="remove-line-btn text-slate-400 hover:text-rose-600 p-1.5 transition-colors" title="লাইন মুছুন">
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Footer Arithmetic Calculation -->
+            <div class="bg-slate-50 p-4 border-t border-slate-200 flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-600">মোট লাইন: <strong id="manual-line-count">1</strong> টি</span>
+              <div class="text-right">
+                <span class="text-xs text-slate-500">সর্বমোট (Grand Total):</span>
+                <span id="manual-grand-total" class="text-base md:text-lg font-bold text-teal-800 ml-2">৳0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Save Button for Manual Entry -->
+          <div class="pt-2">
+            <button type="submit" id="manual-save-memo-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-lg shadow-md transition-all text-sm flex items-center justify-center gap-2 min-touch active:scale-98">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+              <span>মেমো সংরক্ষণ করুন (Save Memo) &rarr;</span>
+            </button>
+          </div>
+        </form>
+
+      </div>
+
+    </div>
+
+    <!-- Right 1 Column: Recent Uploads & Status Queue -->
+    <div class="space-y-4">
+      <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-sm font-bold text-slate-800">সাম্প্রতিক মেমো কিউ</h2>
+          <span class="text-[11px] text-teal-700 font-semibold">{{ recent_memos|length }} টি মেমো</span>
+        </div>
+
+        <div class="space-y-2.5">
+          {% for rm in recent_memos %}
+          <div class="p-3 rounded-lg border border-slate-200 hover:border-teal-400 bg-slate-50/50 hover:bg-white transition-all space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-800">#{{ rm.memo_number or rm.id|string|truncate(6, True, '') }}</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ 'bg-emerald-100 text-emerald-800' if rm.status == 'APPROVED' else 'bg-amber-100 text-amber-800' }}">
+                {{ "অনুমোদিত" if rm.status == "APPROVED" else "যাচাই প্রয়োজন" }}
+              </span>
+            </div>
+            
+            <div class="flex items-center justify-between text-xs text-slate-500">
+              <span class="truncate max-w-[140px]">{{ rm.supplier.name if rm.supplier else 'K Color Cosmetics' }}</span>
+              <span class="font-bold text-slate-800">৳{{ "%.2f"|format(rm.extracted_total or 0) }}</span>
+            </div>
+
+            <div class="pt-1 flex items-center justify-end">
+              <a href="/review/{{ rm.id }}" class="text-xs text-teal-700 hover:text-teal-900 font-semibold flex items-center gap-1">
+                <span>রিভিউ খুলুন</span> &rarr;
+              </a>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center py-6 text-xs text-slate-400">
+            কোনো পূর্ববর্তী মেমো পাওয়া যায়নি।
+          </div>
+          {% endfor %}
         </div>
       </div>
 
-      <div class="border border-slate-300 rounded-lg overflow-hidden bg-slate-900 flex justify-center p-2">
-        <canvas id="preview-canvas" class="max-h-96 max-w-full object-contain"></canvas>
-      </div>
-
-      <form id="upload-form" class="space-y-4 pt-2">
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">সরবরাহকারী নির্বাচন (ঐচ্ছিক):</label>
-          <select id="supplier-select" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-teal-500">
-            <option value="">স্বয়ংক্রিয়ভাবে মেমো থেকে শনাক্ত করুন</option>
-            {% for s in suppliers %}
-            <option value="{{ s.id }}">{{ s.name }} ({{ s.phone or 'ফোন নেই' }})</option>
-            {% endfor %}
-          </select>
+      <!-- Quick Helpful Guide Card -->
+      <div class="bg-teal-50/70 p-4 rounded-xl border border-teal-200 text-xs text-teal-900 space-y-2">
+        <div class="font-bold flex items-center gap-1.5 text-teal-800">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>ব্যবহার নির্দেশিকা</span>
         </div>
-
-        <button type="submit" id="upload-submit-btn" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold py-3 rounded-lg shadow-sm transition-all text-sm flex items-center justify-center gap-2">
-          <span data-i18n="process_memo">মেমো প্রসেস ও এক্সট্রাক্ট করুন &rarr;</span>
-        </button>
-
-        <div id="upload-status-msg" class="text-xs text-center font-medium text-teal-700 hidden"></div>
-      </form>
+        <p class="leading-relaxed">
+          ছবি তোলার পর স্পষ্ট না হলে বা বাঁকা থাকলে <strong>৯০° বামে/ডানে</strong> বাটন ব্যবহার করে সোজা করুন। মেমো সংরক্ষণ করার সাথে সাথেই নির্ভুলভাবে স্টক লেজারে পণ্যের জের হালনাগাদ হবে।
+        </p>
+      </div>
     </div>
 
   </div>
@@ -74,6 +256,33 @@
 {% block scripts %}
 <script type="module" src="/static/js/capture.js"></script>
 <script>
+  // Tab Switching Logic
+  const tabOcrBtn = document.getElementById('tab-ocr-btn');
+  const tabManualBtn = document.getElementById('tab-manual-btn');
+  const ocrContainer = document.getElementById('ocr-mode-container');
+  const manualContainer = document.getElementById('manual-mode-container');
+
+  function switchToOcr() {
+    tabOcrBtn.classList.add('bg-white', 'text-teal-800', 'shadow-xs');
+    tabOcrBtn.classList.remove('text-slate-600');
+    tabManualBtn.classList.remove('bg-white', 'text-teal-800', 'shadow-xs');
+    tabManualBtn.classList.add('text-slate-600');
+    ocrContainer.classList.remove('hidden');
+    manualContainer.classList.add('hidden');
+  }
+
+  function switchToManual() {
+    tabManualBtn.classList.add('bg-white', 'text-teal-800', 'shadow-xs');
+    tabManualBtn.classList.remove('text-slate-600');
+    tabOcrBtn.classList.remove('bg-white', 'text-teal-800', 'shadow-xs');
+    tabOcrBtn.classList.add('text-slate-600');
+    manualContainer.classList.remove('hidden');
+    ocrContainer.classList.add('hidden');
+  }
+
+  if (tabOcrBtn) tabOcrBtn.addEventListener('click', switchToOcr);
+  if (tabManualBtn) tabManualBtn.addEventListener('click', switchToManual);
+
   // Quick Sample Loader
   document.getElementById('load-sample-btn')?.addEventListener('click', async () => {
     try {
@@ -86,9 +295,15 @@
       const input = document.getElementById('camera-file-input');
       input.files = dataTransfer.files;
       input.dispatchEvent(new Event('change'));
+      window.showToast?.('স্যাম্পল মেমো সফলভাবে লোড হয়েছে!', 'info');
     } catch (e) {
-      alert('Error loading sample image: ' + e.message);
+      window.showToast?.('স্যাম্পল লোড করতে সমস্যা: ' + e.message, 'error');
     }
+  });
+
+  // Dropzone click trigger
+  document.getElementById('dropzone-box')?.addEventListener('click', () => {
+    document.getElementById('camera-file-input')?.click();
   });
 </script>
 {% endblock %}
