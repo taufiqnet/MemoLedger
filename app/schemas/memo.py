@@ -33,6 +33,9 @@ class MemoLineUpdate(BaseModel):
 class MemoLinesSaveDraftRequest(BaseModel):
     lines: List[MemoLineUpdate]
     written_total: Optional[Decimal] = None
+    supplier_id: Optional[uuid.UUID] = None
+    memo_number: Optional[str] = None
+    memo_date: Optional[str] = None
 
 
 class MemoManualCreate(BaseModel):

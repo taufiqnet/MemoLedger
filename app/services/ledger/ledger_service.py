@@ -150,8 +150,14 @@ class LedgerService:
         if lines_data:
             line_map = {line.id: line for line in memo.lines}
             for item in lines_data:
-                line_id = uuid.UUID(str(item["id"])) if isinstance(item["id"], str) else item["id"]
-                if line_id in line_map:
+                raw_id = item.get("id")
+                line_id = None
+                if raw_id:
+                    try:
+                        line_id = uuid.UUID(str(raw_id))
+                    except (ValueError, TypeError):
+                        line_id = None
+                if line_id and line_id in line_map:
                     line = line_map[line_id]
                     line.parsed_name = item.get("parsed_name", line.parsed_name)
                     line.parsed_variant = item.get("parsed_variant", line.parsed_variant)
@@ -160,7 +166,10 @@ class LedgerService:
                     line.parsed_unit_price = Decimal(str(item.get("parsed_unit_price", line.parsed_unit_price or 0)))
                     line.parsed_line_total = Decimal(str(item.get("parsed_line_total", line.parsed_line_total or 0)))
                     if item.get("matched_variant_id"):
-                        line.matched_variant_id = uuid.UUID(str(item["matched_variant_id"]))
+                        try:
+                            line.matched_variant_id = uuid.UUID(str(item["matched_variant_id"]))
+                        except (ValueError, TypeError):
+                            pass
                     line.status = item.get("status", "AUTO_MATCHED")
 
         # Post movements to the stock ledger for every line with a matched variant

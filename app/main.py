@@ -132,6 +132,7 @@ def review_page(
         raise HTTPException(status_code=404, detail="Memo not found")
 
     variants = db.query(ProductVariant).join(Product).filter(Product.tenant_id == tenant.id).all()
+    suppliers = db.query(Supplier).filter(Supplier.tenant_id == tenant.id).all()
 
     lines_data = [
         {
@@ -160,6 +161,7 @@ def review_page(
             "tenant": tenant,
             "memo": memo,
             "variants": variants,
+            "suppliers": suppliers,
             "lines_json": json.dumps(lines_data),
         }
     )

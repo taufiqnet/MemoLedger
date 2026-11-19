@@ -174,16 +174,45 @@ export function initReview() {
       b.innerHTML = `<span>সংরক্ষণ হচ্ছে...</span>`;
     });
 
+    const supplierSelect = document.getElementById('review-supplier-select');
+    const memoNumberInput = document.getElementById('review-memo-number');
+    const memoDateInput = document.getElementById('review-memo-date');
+
+    const payload = {
+      lines,
+      supplier_id: supplierSelect ? (supplierSelect.value || null) : undefined,
+      memo_number: memoNumberInput ? (memoNumberInput.value.trim() || null) : undefined,
+      memo_date: memoDateInput ? (memoDateInput.value.trim() || null) : undefined
+    };
+
     try {
       const resp = await fetch(`/api/v1/memos/${memoId}/lines`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines })
+        body: JSON.stringify(payload)
       });
 
       if (!resp.ok) {
-        const err = await resp.json();
+        const err = await resp.json().catch(() => ({}));
         throw new Error(err.detail || 'Draft save failed');
+      }
+
+      const data = await resp.json();
+
+      // Update title with new memo number
+      if (memoNumberInput && memoNumberInput.value.trim()) {
+        const titleNum = document.getElementById('memo-title-number');
+        if (titleNum) titleNum.textContent = memoNumberInput.value.trim();
+      }
+
+      // Sync returned line IDs onto DOM rows
+      if (data.lines && Array.isArray(data.lines)) {
+        const rows = document.querySelectorAll('.line-item-row');
+        data.lines.forEach((l, idx) => {
+          if (rows[idx]) {
+            rows[idx].setAttribute('data-line-id', l.id);
+          }
+        });
       }
 
       window.showToast?.('ড্রাফট সফলভাবে সংরক্ষিত হয়েছে!', 'success');
@@ -362,7 +391,13 @@ export function initReview() {
 
   // Initialize
   try {
-    const linesData = JSON.parse(container.getAttribute('data-lines') || '[]');
+    const scriptEl = document.getElementById('review-lines-json');
+    let linesData = [];
+    if (scriptEl && scriptEl.textContent) {
+      linesData = JSON.parse(scriptEl.textContent);
+    } else {
+      linesData = JSON.parse(container.getAttribute('data-lines') || '[]');
+    }
     renderBBoxes(linesData);
     setupLiveCalculations();
   } catch (e) {

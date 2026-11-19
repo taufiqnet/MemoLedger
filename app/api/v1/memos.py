@@ -269,6 +269,20 @@ def save_memo_lines_draft(
     if not memo:
         raise HTTPException(status_code=404, detail="Memo not found")
 
+    if memo.status == "APPROVED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot modify lines for an already approved memo. This memo has already been committed to the inventory ledger."
+        )
+
+    # Optional metadata updates
+    if draft_data.supplier_id is not None:
+        memo.supplier_id = draft_data.supplier_id
+    if draft_data.memo_number is not None:
+        memo.memo_number = draft_data.memo_number
+    if draft_data.memo_date is not None:
+        memo.memo_date = draft_data.memo_date
+
     total_sum = Decimal("0.00")
     for l_update in draft_data.lines:
         line = None
@@ -321,11 +335,21 @@ def save_memo_lines_draft(
         memo.total_mismatch_flag = False
 
     db.commit()
+    db.refresh(memo)
     return {
         "status": "SUCCESS",
         "message": "Memo draft lines saved successfully.",
         "extracted_total": float(memo.extracted_total),
-        "total_mismatch_flag": memo.total_mismatch_flag
+        "total_mismatch_flag": memo.total_mismatch_flag,
+        "lines": [
+            {
+                "id": str(l.id),
+                "line_number": l.line_number,
+                "parsed_name": l.parsed_name,
+                "parsed_line_total": float(l.parsed_line_total or 0)
+            }
+            for l in memo.lines
+        ]
     }
 
 
