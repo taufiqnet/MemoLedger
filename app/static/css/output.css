@@ -454,3 +454,46 @@ button, input, select, textarea, a {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
+
+/* Upload Canvas Viewer & Responsive Controls */
+#canvas-wrapper {
+  height: 360px;
+  max-height: 55vh;
+  width: 100%;
+}
+@media (min-width: 640px) {
+  #canvas-wrapper {
+    height: 460px;
+    max-height: 60vh;
+  }
+}
+@media (min-width: 1024px) {
+  #canvas-wrapper {
+    height: 500px;
+    max-height: 65vh;
+  }
+}
+
+#preview-canvas {
+  display: block;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain;
+  margin: auto;
+}
+
+#canvas-wrapper.overflow-auto #preview-canvas {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* Progress Bar Gradients & Styling */
+.bg-gradient-to-r {
+  background-image: linear-gradient(to right, var(--tw-gradient-stops, #14b8a6, #10b981, #5eead4));
+}
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, #0f172a, #042f2e);
+}
+

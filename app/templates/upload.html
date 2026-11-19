@@ -56,36 +56,83 @@
         <!-- Canvas Preview & Rotate Controls -->
         <div id="preview-container" class="hidden space-y-4 pt-2">
           <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-            <span class="text-xs font-bold text-slate-700">ছবি প্রিভিউ ও সঠিক এঙ্গেল করুন:</span>
+            <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+              ছবি প্রিভিউ ও সঠিক এঙ্গেল:
+            </span>
             <div class="flex items-center gap-2">
-              <button type="button" id="rotate-left-btn" class="bg-white hover:bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-md font-semibold border border-slate-300 shadow-xs flex items-center gap-1 min-touch">
+              <button type="button" id="toggle-zoom-btn" class="bg-white hover:bg-slate-100 text-slate-700 text-xs px-2.5 py-1.5 rounded-md font-semibold border border-slate-300 shadow-xs flex items-center gap-1 min-touch">
+                <span id="zoom-icon">🔍</span> <span id="zoom-text">জুম</span>
+              </button>
+              <button type="button" id="rotate-left-btn" class="bg-white hover:bg-slate-100 text-slate-700 text-xs px-2.5 py-1.5 rounded-md font-semibold border border-slate-300 shadow-xs flex items-center gap-1 min-touch" title="৯০ ডিগ্রি বামে ঘুরান">
                 <span>↺</span> ৯০° বামে
               </button>
-              <button type="button" id="rotate-right-btn" class="bg-white hover:bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-md font-semibold border border-slate-300 shadow-xs flex items-center gap-1 min-touch">
+              <button type="button" id="rotate-right-btn" class="bg-white hover:bg-slate-100 text-slate-700 text-xs px-2.5 py-1.5 rounded-md font-semibold border border-slate-300 shadow-xs flex items-center gap-1 min-touch" title="৯০ ডিগ্রি ডানে ঘুরান">
                 <span>↻</span> ৯০° ডানে
               </button>
             </div>
           </div>
 
-          <div class="border border-slate-300 rounded-xl overflow-hidden bg-slate-900 flex justify-center p-2 shadow-inner">
-            <canvas id="preview-canvas" class="max-h-[60vh] max-w-full object-contain"></canvas>
+          <!-- Constrained Responsive Viewer: Fits 100% of the image without blowing up page height -->
+          <div id="canvas-wrapper" class="relative w-full rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center border border-slate-800 shadow-inner h-[360px] sm:h-[460px] md:h-[500px] p-2 transition-all">
+            <canvas id="preview-canvas" class="block transition-transform duration-200" style="max-height: 100%; max-width: 100%; width: auto; height: auto; object-fit: contain; margin: auto;"></canvas>
+            <div id="viewer-badge" class="absolute bottom-2.5 left-2.5 bg-slate-900/85 backdrop-blur-xs text-[11px] text-slate-300 px-2.5 py-1 rounded-md border border-slate-700/80 flex items-center gap-1.5 pointer-events-none shadow-xs">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>সম্পূর্ণ মেমো ফ্রেম (ফিট ভিউ)</span>
+            </div>
           </div>
 
-          <form id="upload-form" class="space-y-4 pt-2">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1.5">সরবরাহকারী নির্বাচন (ঐচ্ছিক):</label>
-              <select id="supplier-select" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
-                <option value="">স্বয়ংক্রিয়ভাবে মেমো থেকে শনাক্ত করুন</option>
-                {% for s in suppliers %}
-                <option value="{{ s.id }}">{{ s.name }} ({{ s.phone or 'ফোন নেই' }})</option>
-                {% endfor %}
-              </select>
+          <form id="upload-form" class="space-y-4 pt-1">
+            <!-- Automated Supplier Note (Dropdown Removed as Requested) -->
+            <div class="flex items-center gap-2 p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-800">
+              <svg class="w-4 h-4 text-teal-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>মেমোর ছবি থেকেই স্বয়ংক্রিয়ভাবে সরবরাহকারী ও পণ্যের তালিকা শনাক্ত করা হবে।</span>
             </div>
 
+            <!-- Submit Button -->
             <button type="submit" id="upload-submit-btn" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold py-3.5 rounded-lg shadow-md transition-all text-sm flex items-center justify-center gap-2 min-touch active:scale-98">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span data-i18n="process_memo">মেমো প্রসেস ও এক্সট্রাক্ট করুন &rarr;</span>
             </button>
+
+            <!-- Modern Animated Multi-Stage Progress Bar -->
+            <div id="upload-progress-box" class="hidden space-y-3 p-4 md:p-5 bg-gradient-to-br from-slate-900 to-teal-950 text-white rounded-xl shadow-lg border border-teal-500/30">
+              <!-- Header info with glowing spinner -->
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <div class="relative flex items-center justify-center w-6 h-6">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-teal-400"></span>
+                  </div>
+                  <div>
+                    <h4 id="progress-title" class="text-xs md:text-sm font-bold text-white tracking-wide">ছবি প্রসেসিং শুরু হচ্ছে...</h4>
+                    <p id="progress-subtext" class="text-[11px] text-teal-200/80">অনুগ্রহ করে কয়েক সেকেন্ড অপেক্ষা করুন</p>
+                  </div>
+                </div>
+                <span id="progress-percentage" class="text-sm md:text-base font-extrabold text-teal-300 font-mono">15%</span>
+              </div>
+
+              <!-- Animated Gradient Progress Bar -->
+              <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700/80">
+                <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-300 rounded-full transition-all duration-400 ease-out shadow-sm" style="width: 15%"></div>
+              </div>
+
+              <!-- 4 Processing Stage Badges -->
+              <div class="grid grid-cols-4 gap-1.5 pt-1 text-center">
+                <div id="step-badge-1" class="p-1.5 rounded-md bg-teal-500/20 border border-teal-500/40 text-[10px] md:text-xs font-semibold text-teal-200">
+                  ১. আপলোড
+                </div>
+                <div id="step-badge-2" class="p-1.5 rounded-md bg-slate-800/80 border border-slate-700 text-[10px] md:text-xs font-semibold text-slate-400">
+                  ২. OpenCV
+                </div>
+                <div id="step-badge-3" class="p-1.5 rounded-md bg-slate-800/80 border border-slate-700 text-[10px] md:text-xs font-semibold text-slate-400">
+                  ৩. AI লাইন
+                </div>
+                <div id="step-badge-4" class="p-1.5 rounded-md bg-slate-800/80 border border-slate-700 text-[10px] md:text-xs font-semibold text-slate-400">
+                  ৪. খতিয়ান মিল
+                </div>
+              </div>
+            </div>
 
             <div id="upload-status-msg" class="text-xs text-center font-bold text-teal-700 hidden p-2 bg-teal-50 rounded-lg border border-teal-200"></div>
           </form>

@@ -4,6 +4,7 @@ let currentRotation = 0;
 let rawImage = null;
 let canvas = null;
 let ctx = null;
+let isZoomed = false;
 
 export function initCapture() {
   const fileInput = document.getElementById('camera-file-input');
@@ -14,6 +15,7 @@ export function initCapture() {
 
   const rotateLeftBtn = document.getElementById('rotate-left-btn');
   const rotateRightBtn = document.getElementById('rotate-right-btn');
+  const toggleZoomBtn = document.getElementById('toggle-zoom-btn');
   const previewContainer = document.getElementById('preview-container');
   const uploadForm = document.getElementById('upload-form');
   const uploadSubmitBtn = document.getElementById('upload-submit-btn');
@@ -29,12 +31,14 @@ export function initCapture() {
         rawImage = new Image();
         rawImage.onload = () => {
           currentRotation = 0;
+          isZoomed = false;
           renderCanvas();
+          applyZoomStyles();
           if (previewContainer) {
             previewContainer.classList.remove('hidden');
             previewContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
-          window.showToast?.('ছবি সফলভাবে লোড হয়েছে। প্রয়োজনে ৯০° ঘুরিয়ে সোজা করুন।', 'info');
+          window.showToast?.('ছবি লোড হয়েছে। মেমো সম্পূর্ণ ফ্রেমে ফিট করা হয়েছে।', 'info');
         };
         rawImage.src = event.target.result;
       };
@@ -42,10 +46,18 @@ export function initCapture() {
     });
   }
 
+  if (toggleZoomBtn) {
+    toggleZoomBtn.addEventListener('click', () => {
+      isZoomed = !isZoomed;
+      applyZoomStyles();
+    });
+  }
+
   if (rotateLeftBtn) {
     rotateLeftBtn.addEventListener('click', () => {
       currentRotation = (currentRotation - 90 + 360) % 360;
       renderCanvas();
+      applyZoomStyles();
     });
   }
 
@@ -53,6 +65,7 @@ export function initCapture() {
     rotateRightBtn.addEventListener('click', () => {
       currentRotation = (currentRotation + 90) % 360;
       renderCanvas();
+      applyZoomStyles();
     });
   }
 
@@ -63,23 +76,36 @@ export function initCapture() {
 
       const statusMsg = document.getElementById('upload-status-msg');
       if (statusMsg) {
-        statusMsg.classList.remove('hidden');
-        statusMsg.textContent = "মেমো আপলোড ও AI এক্সট্রাকশন চলছে...";
+        statusMsg.classList.add('hidden');
       }
+
       if (uploadSubmitBtn) {
         uploadSubmitBtn.disabled = true;
-        uploadSubmitBtn.innerHTML = `<span>প্রসেসিং হচ্ছে...</span>`;
+        uploadSubmitBtn.innerHTML = `
+          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span>প্রসেসিং ও এক্সট্রাকশন চলছে...</span>
+        `;
       }
+
+      const progressCtrl = createProgressController();
 
       // Convert canvas to blob
       canvas.toBlob(async (blob) => {
+        if (!blob) {
+          progressCtrl?.error('ক্যানভাস থেকে ছবি তৈরি ব্যর্থ হয়েছে।');
+          if (uploadSubmitBtn) {
+            uploadSubmitBtn.disabled = false;
+            uploadSubmitBtn.innerHTML = `<span>মেমো প্রসেস ও এক্সট্রাক্ট করুন &rarr;</span>`;
+          }
+          return;
+        }
+
         const formData = new FormData();
         formData.append('file', blob, 'memo_capture.jpg');
-
-        const supplierSelect = document.getElementById('supplier-select');
-        if (supplierSelect && supplierSelect.value) {
-          formData.append('supplier_id', supplierSelect.value);
-        }
+        // Supplier is intentionally not attached: auto-detected from memo image directly
 
         try {
           const resp = await fetch('/api/v1/memos/upload', {
@@ -88,20 +114,24 @@ export function initCapture() {
           });
 
           if (!resp.ok) {
-            const err = await resp.json();
+            const err = await resp.json().catch(() => ({}));
             throw new Error(err.detail || 'Upload failed');
           }
 
           const data = await resp.json();
+          progressCtrl?.finish();
           window.showToast?.('মেমো সফলভাবে প্রসেস হয়েছে!', 'success');
+
           // Navigate to review screen
           setTimeout(() => {
             window.location.href = `/review/${data.memo_id}`;
-          }, 400);
+          }, 450);
         } catch (error) {
+          progressCtrl?.error(error.message);
           if (statusMsg) {
+            statusMsg.classList.remove('hidden');
             statusMsg.textContent = `সমস্যা: ${error.message}`;
-            statusMsg.classList.add('text-rose-600', 'bg-rose-50', 'border-rose-200');
+            statusMsg.className = 'text-xs text-center font-bold text-rose-600 p-2.5 bg-rose-50 rounded-lg border border-rose-200 mt-2';
           }
           if (uploadSubmitBtn) {
             uploadSubmitBtn.disabled = false;
@@ -115,6 +145,126 @@ export function initCapture() {
 
   // --- Manual Memo Entry Handling ---
   setupManualMemoForm();
+}
+
+function applyZoomStyles() {
+  const wrapper = document.getElementById('canvas-wrapper');
+  const zoomText = document.getElementById('zoom-text');
+  const zoomIcon = document.getElementById('zoom-icon');
+  const badge = document.getElementById('viewer-badge');
+
+  if (!canvas || !wrapper) return;
+
+  if (isZoomed) {
+    wrapper.classList.remove('flex', 'items-center', 'justify-center', 'overflow-hidden');
+    wrapper.classList.add('overflow-auto', 'block', 'cursor-grab');
+    canvas.style.maxHeight = 'none';
+    canvas.style.maxWidth = 'none';
+    canvas.style.width = 'auto';
+    canvas.style.height = 'auto';
+    canvas.style.margin = '0 auto';
+    canvas.style.display = 'block';
+
+    if (zoomText) zoomText.textContent = 'ফিট ভিউ';
+    if (zoomIcon) zoomIcon.textContent = '🔲';
+    if (badge) {
+      badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span><span>জুম ভিউ (স্ক্রোল করে দেখুন)</span>`;
+    }
+  } else {
+    wrapper.classList.remove('overflow-auto', 'block', 'cursor-grab');
+    wrapper.classList.add('flex', 'items-center', 'justify-center', 'overflow-hidden');
+    canvas.style.maxHeight = '100%';
+    canvas.style.maxWidth = '100%';
+    canvas.style.width = 'auto';
+    canvas.style.height = 'auto';
+    canvas.style.margin = 'auto';
+    canvas.style.display = 'block';
+
+    if (zoomText) zoomText.textContent = 'জুম';
+    if (zoomIcon) zoomIcon.textContent = '🔍';
+    if (badge) {
+      badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>সম্পূর্ণ মেমো ফ্রেম (ফিট ভিউ)</span>`;
+    }
+  }
+}
+
+function createProgressController() {
+  const box = document.getElementById('upload-progress-box');
+  const title = document.getElementById('progress-title');
+  const subtext = document.getElementById('progress-subtext');
+  const percent = document.getElementById('progress-percentage');
+  const bar = document.getElementById('progress-bar-fill');
+  const badges = [
+    document.getElementById('step-badge-1'),
+    document.getElementById('step-badge-2'),
+    document.getElementById('step-badge-3'),
+    document.getElementById('step-badge-4')
+  ];
+
+  if (!box || !bar) return null;
+
+  box.classList.remove('hidden');
+  bar.className = 'h-full bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-300 rounded-full transition-all duration-400 ease-out shadow-sm';
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  const stages = [
+    { p: 20, stage: 1, title: 'ছবি আপলোড ও ফ্রেম যাচাই...', sub: 'ছবি সার্ভারে নিরাপদে পাঠানো হচ্ছে...' },
+    { p: 48, stage: 2, title: 'OpenCV কোণ সংশোধন ও ক্লিয়ারিং...', sub: 'আলো, বৈসাদৃশ্য ও বাঁকা অংশ সোজা করা হচ্ছে...' },
+    { p: 75, stage: 3, title: 'AI দিয়ে বাংলা ও ইংরেজি লাইন শনাক্তকরণ...', sub: 'হাতে লেখা মেমোর পণ্য ও দর রূপান্তর হচ্ছে...' },
+    { p: 92, stage: 4, title: 'বাংলা সংখ্যা (০-৯) ও স্টক খতিয়ান মিলানো...', sub: 'দর ও পরিমাণের হিসাব মেলানো হচ্ছে...' }
+  ];
+
+  let currentStageIdx = 0;
+
+  function setStage(st) {
+    if (bar) bar.style.width = `${st.p}%`;
+    if (percent) percent.textContent = `${st.p}%`;
+    if (title) title.textContent = st.title;
+    if (subtext) subtext.textContent = st.sub;
+
+    badges.forEach((b, idx) => {
+      if (!b) return;
+      if (idx < st.stage - 1) {
+        b.className = 'p-1.5 rounded-md bg-teal-500/30 border border-teal-400 text-[10px] md:text-xs font-bold text-teal-200';
+      } else if (idx === st.stage - 1) {
+        b.className = 'p-1.5 rounded-md bg-teal-500/20 border border-teal-500/50 text-[10px] md:text-xs font-bold text-teal-100 animate-pulse';
+      } else {
+        b.className = 'p-1.5 rounded-md bg-slate-800/80 border border-slate-700 text-[10px] md:text-xs font-semibold text-slate-400';
+      }
+    });
+  }
+
+  setStage(stages[0]);
+
+  const intervalId = setInterval(() => {
+    currentStageIdx++;
+    if (currentStageIdx < stages.length) {
+      setStage(stages[currentStageIdx]);
+    }
+  }, 650);
+
+  return {
+    finish: () => {
+      clearInterval(intervalId);
+      if (bar) bar.style.width = '100%';
+      if (percent) percent.textContent = '100%';
+      if (title) title.textContent = 'মেমো সফলভাবে প্রসেস হয়েছে!';
+      if (subtext) subtext.textContent = 'রিভিউ পেজে নিয়ে যাওয়া হচ্ছে...';
+      badges.forEach(b => {
+        if (b) b.className = 'p-1.5 rounded-md bg-emerald-500/30 border border-emerald-400 text-[10px] md:text-xs font-bold text-emerald-200';
+      });
+    },
+    error: (msg) => {
+      clearInterval(intervalId);
+      if (bar) {
+        bar.style.width = '100%';
+        bar.className = 'h-full bg-rose-500 rounded-full transition-all duration-300';
+      }
+      if (percent) percent.textContent = '!';
+      if (title) title.textContent = 'প্রসেসিং ত্রুটি হয়েছে';
+      if (subtext) subtext.textContent = msg || 'মেমো প্রসেস সম্পন্ন করা যায়নি।';
+    }
+  };
 }
 
 function renderCanvas() {
