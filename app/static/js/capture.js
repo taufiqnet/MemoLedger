@@ -158,9 +158,12 @@ function applyZoomStyles() {
   if (isZoomed) {
     wrapper.classList.remove('flex', 'items-center', 'justify-center', 'overflow-hidden');
     wrapper.classList.add('overflow-auto', 'block', 'cursor-grab');
+    wrapper.style.maxHeight = '460px';
+    wrapper.style.height = '440px';
+
     canvas.style.maxHeight = 'none';
     canvas.style.maxWidth = 'none';
-    canvas.style.width = 'auto';
+    canvas.style.width = '100%';
     canvas.style.height = 'auto';
     canvas.style.margin = '0 auto';
     canvas.style.display = 'block';
@@ -173,10 +176,14 @@ function applyZoomStyles() {
   } else {
     wrapper.classList.remove('overflow-auto', 'block', 'cursor-grab');
     wrapper.classList.add('flex', 'items-center', 'justify-center', 'overflow-hidden');
-    canvas.style.maxHeight = '100%';
+    wrapper.style.maxHeight = '460px';
+    wrapper.style.height = '440px';
+
+    canvas.style.maxHeight = '420px';
     canvas.style.maxWidth = '100%';
     canvas.style.width = 'auto';
     canvas.style.height = 'auto';
+    canvas.style.objectFit = 'contain';
     canvas.style.margin = 'auto';
     canvas.style.display = 'block';
 

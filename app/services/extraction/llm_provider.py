@@ -1,10 +1,14 @@
 import abc
+import io
 import json
 import base64
 import hashlib
 import re
 import logging
 from typing import Dict, Any, List, Optional
+import numpy as np
+from PIL import Image
+
 from app.core.config import settings
 
 logger = logging.getLogger("memoledger.vision")
@@ -32,25 +36,144 @@ class VisionLLMProvider(abc.ABC):
         pass
 
 
-class MockVisionProvider(VisionLLMProvider):
+class RapidOCRVisionProvider(VisionLLMProvider):
     """
-    Built-in high fidelity provider for zero-cost offline development, unit tests,
-    and multi-memo recognition supporting K Color Cosmetics Memo #3508, Memo #2367, and custom photos.
+    Real-time, local OCR engine powered by RapidOCR (ONNX).
+    Actually processes uploaded image pixels to detect printed text, numbers, handwriting,
+    and bounding boxes dynamically without using hardcoded default data.
     """
     def __init__(self):
-        self._last_written_total = "৩৫৫০/-"
+        try:
+            from rapidocr_onnxruntime import RapidOCR
+            self.engine = RapidOCR()
+        except Exception as e:
+            logger.warning(f"RapidOCR engine initialization failed: {e}")
+            self.engine = None
+        self._last_written_total = None
 
     def extract_memo_stage_a(self, image_bytes: bytes) -> Dict[str, Any]:
-        img_hash = hashlib.sha256(image_bytes).hexdigest()
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        w_img, h_img = img.size
+        arr = np.array(img)
 
-        # Check if this image matches Memo #3508 sample
-        if img_hash.startswith("0818282f") or len(image_bytes) == 139193:
-            self._last_written_total = "৩৫৫০/-"
-            return self._memo_3508_stage_a()
+        ocr_blocks = []
+        if self.engine:
+            try:
+                results, _ = self.engine(arr)
+                if results:
+                    for bbox, text, score in results:
+                        ymin = min(pt[1] for pt in bbox)
+                        xmin = min(pt[0] for pt in bbox)
+                        ymax = max(pt[1] for pt in bbox)
+                        xmax = max(pt[0] for pt in bbox)
+                        ocr_blocks.append({
+                            "text": text.strip(),
+                            "score": float(score),
+                            "bbox": [
+                                int(ymin / h_img * 1000),
+                                int(xmin / w_img * 1000),
+                                int(ymax / h_img * 1000),
+                                int(xmax / w_img * 1000)
+                            ],
+                            "ymin": ymin,
+                            "xmin": xmin,
+                            "ymax": ymax,
+                            "xmax": xmax
+                        })
+            except Exception as e:
+                logger.warning(f"RapidOCR execution failed on image: {e}")
 
-        # Otherwise, process as Memo #2367 (Shakil Keshori / Zafran / BG Nose strip)
-        self._last_written_total = "৫৮৯০/-"
-        return self._memo_2367_stage_a()
+        # Sort OCR blocks top-to-bottom
+        ocr_blocks.sort(key=lambda b: b["ymin"])
+
+        # Detect memo number in top 40% of image
+        detected_memo_number = None
+        for b in ocr_blocks:
+            if b["bbox"][0] < 400:
+                m = re.search(r'\b(\d{3,6})\b', b["text"])
+                if m:
+                    detected_memo_number = m.group(1)
+                    break
+
+        # Detect supplier name in header area
+        supplier_name = None
+        for b in ocr_blocks:
+            if b["bbox"][0] < 350:
+                t = b["text"].lower()
+                if "color" in t or "kcolor" in t or "cosmetics" in t or "কসমেটিক্স" in t:
+                    supplier_name = "K Color Cosmetics"
+                    break
+
+        # Dynamically cluster OCR body blocks into horizontal lines
+        body_blocks = [b for b in ocr_blocks if 140 <= b["bbox"][0] <= 850 and b["bbox"][1] >= 40]
+        body_blocks.sort(key=lambda b: b["ymin"])
+
+        line_clusters = []
+        for b in body_blocks:
+            placed = False
+            for cl in line_clusters:
+                avg_y = sum(item["ymin"] for item in cl) / len(cl)
+                if abs(b["ymin"] - avg_y) < (h_img * 0.025):
+                    cl.append(b)
+                    placed = True
+                    break
+            if not placed:
+                line_clusters.append([b])
+
+        lines = []
+        for idx, cl in enumerate(line_clusters, 1):
+            cl.sort(key=lambda item: item["xmin"])
+            line_text = " ".join(item["text"] for item in cl).strip()
+            if not line_text:
+                continue
+
+            ymin_c = min(item["ymin"] for item in cl)
+            xmin_c = min(item["xmin"] for item in cl)
+            ymax_c = max(item["ymax"] for item in cl)
+            xmax_c = max(item["xmax"] for item in cl)
+
+            lines.append({
+                "line_number": idx,
+                "raw_text": line_text,
+                "bbox": [
+                    int(ymin_c / h_img * 1000),
+                    int(xmin_c / w_img * 1000),
+                    int(ymax_c / h_img * 1000),
+                    int(xmax_c / w_img * 1000)
+                ],
+                "script_tag": "mixed"
+            })
+
+        # If no lines were detected at all, supply an initial empty row for manual entry
+        if not lines:
+            lines = [
+                {
+                    "line_number": 1,
+                    "raw_text": "নতুন আইটেম",
+                    "bbox": [250, 150, 290, 800],
+                    "script_tag": "mixed"
+                }
+            ]
+
+        # Detect written total near bottom of page
+        written_total = "0"
+        for b in reversed(ocr_blocks):
+            if b["bbox"][0] > 680:
+                m = re.search(r'([০-৯0-9,]+)', b["text"])
+                if m and len(m.group(1).replace(',', '')) >= 2:
+                    written_total = m.group(1)
+                    break
+
+        self._last_written_total = written_total
+        return {
+            "supplier_header": {
+                "name": supplier_name or "অনির্ধারিত সরবরাহকারী",
+                "memo_number": detected_memo_number or "",
+                "memo_date": ""
+            },
+            "lines": lines,
+            "written_total_raw": written_total
+        }
 
     def _memo_3508_stage_a(self) -> Dict[str, Any]:
         return {
@@ -203,72 +326,82 @@ class MockVisionProvider(VisionLLMProvider):
 
     def _parse_line_heuristic(self, raw: str, ln: int) -> Dict[str, Any]:
         """
-        Layout-agnostic parser extracting name, variant, quantity, unit, price, and total.
+        Layout-agnostic parser extracting name, variant, quantity, unit, price, and total
+        dynamically from arbitrary OCR text tokens.
         """
-        # Exact ground-truth mappings for Memo #3508 benchmark verification
-        if "Sun 625ml" in raw:
-            return {"name": "Sun 625ml", "variant": "(SH)", "qty": "১", "unit": "P", "price": "১০৫০", "total": "১০৫০"}
-        if "Emeli Lip" in raw:
-            return {"name": "Emeli Lip", "variant": "(928)", "qty": "১", "unit": "P", "price": "১৪০", "total": "১৪০"}
-        if "Bath Salt - ১P" in raw:
-            return {"name": "Bath Salt", "variant": None, "qty": "১", "unit": "P", "price": "১৫০", "total": "১৫০"}
-        if "W7 Eye" in raw:
-            return {"name": "W7 Eye", "variant": None, "qty": "১", "unit": "P", "price": "৩৬০", "total": "৩৬০"}
-        if "BOB: Mas" in raw:
-            return {"name": "BOB: Mas", "variant": "(13)", "qty": "১", "unit": "P", "price": "২১০", "total": "২১০"}
-        if "Vase 50ml" in raw:
-            return {"name": "Vase 50ml Cocoa", "variant": "(J)", "qty": "১", "unit": "P", "price": "১৫০", "total": "১৫০"}
-        if "Ribana Castor" in raw:
-            return {"name": "Ribana Castor oil", "variant": None, "qty": "১", "unit": "P", "price": "৫৫০", "total": "৫৫০"}
-        if "Cosrx Sali" in raw:
-            return {"name": "Cosrx Sali", "variant": "(F)", "qty": "১", "unit": "P", "price": "৯০০", "total": "৯০০"}
+        cleaned_raw = raw.strip()
 
-        # Dynamic layout parsing for Memo #2367 and arbitrary user memos
-        var_match = re.search(r'\(([^)]+)\)', raw)
-        variant = f"({var_match.group(1)})" if var_match else None
+        # 1. Extract variant if in parentheses e.g. (SH), (928), (c), (F), (D)
+        var_match = re.search(r'\(([^)]+)\)', cleaned_raw)
+        variant = f"({var_match.group(1).strip()})" if var_match else None
+        cleaned_without_var = re.sub(r'\([^)]+\)', '', cleaned_raw).strip()
 
-        parts = [p.strip() for p in re.split(r'[-–]', raw)]
+        # 2. Extract equation if contains '='
+        parts = [p.strip() for p in re.split(r'[-–—]', cleaned_without_var) if p.strip()]
+
+        name = cleaned_raw
+        qty = "1"
+        unit = "piece"
+        price = "0"
+        total = "0"
+
         if len(parts) >= 2:
-            name_part = parts[0]
+            name = parts[0]
             rest = " - ".join(parts[1:])
 
-            qty_match = re.search(r'([০-৯0-9.]+)\s*([a-zA-ZপিসP]+)?', parts[1])
-            qty = qty_match.group(1) if qty_match else "1"
-            unit = qty_match.group(2) if qty_match and qty_match.group(2) else "piece"
+            if "=" in rest:
+                lhs, rhs = rest.split("=", 1)
+                total_m = re.search(r'([০-৯0-9.]+)', rhs)
+                total = total_m.group(1) if total_m else "0"
 
-            eq_parts = rest.split('=')
-            if len(eq_parts) == 2:
-                total = eq_parts[1].strip()
-                price_match = re.search(r'[xX*×-]\s*([০-৯0-9.]+)', eq_parts[0])
-                price = price_match.group(1) if price_match else total
-            else:
-                num_match = re.findall(r'[xX*×-]?\s*([০-৯0-9.]+)', rest)
-                if len(num_match) >= 2:
-                    price = num_match[-1]
-                    total = num_match[-1]
-                elif len(num_match) == 1:
-                    price = num_match[0]
-                    total = num_match[0]
+                mult_parts = re.split(r'[xX*×]', lhs)
+                if len(mult_parts) >= 2:
+                    q_m = re.search(r'([০-৯0-9.]+)\s*([a-zA-ZপিসP]+)?', mult_parts[0])
+                    if q_m:
+                        qty = q_m.group(1)
+                        if q_m.group(2):
+                            unit = q_m.group(2)
+                    p_m = re.search(r'([০-৯0-9.]+)', mult_parts[1])
+                    if p_m:
+                        price = p_m.group(1)
                 else:
-                    price = "0"
-                    total = "0"
+                    p_m = re.search(r'([০-৯0-9.]+)', lhs)
+                    if p_m:
+                        price = p_m.group(1)
+            else:
+                num_tokens = []
+                for pt in parts[1:]:
+                    qm = re.search(r'([০-৯0-9.]+)\s*([a-zA-ZপিসP]+)?', pt)
+                    if qm:
+                        num_tokens.append((qm.group(1), qm.group(2) or "piece"))
+                if len(num_tokens) >= 2:
+                    qty = num_tokens[0][0]
+                    unit = num_tokens[0][1]
+                    price = num_tokens[1][0]
+                    total = num_tokens[-1][0]
+                elif len(num_tokens) == 1:
+                    price = num_tokens[0][0]
+                    total = num_tokens[0][0]
+        else:
+            # Single string with numbers
+            nums = re.findall(r'([০-৯0-9.]+)', cleaned_raw)
+            if nums:
+                total = nums[-1]
+                price = nums[-1]
+                name = re.sub(r'([০-৯0-9.]+)', '', cleaned_raw).strip(' -–—:=')
 
-            return {
-                "name": name_part,
-                "variant": variant,
-                "qty": qty,
-                "unit": unit,
-                "price": price,
-                "total": total
-            }
+        # Clean up name from leading punctuation or line markers
+        name = re.sub(r'^[#0-9\.\-–—\s]+', '', name).strip()
+        if not name:
+            name = f"আইটেম {ln}"
 
         return {
-            "name": raw,
+            "name": name,
             "variant": variant,
-            "qty": "1",
-            "unit": "piece",
-            "price": "0",
-            "total": "0"
+            "qty": qty,
+            "unit": unit,
+            "price": price,
+            "total": total
         }
 
     def extract_memo_stage_b(
@@ -310,11 +443,11 @@ class GeminiVisionProvider(VisionLLMProvider):
     """
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or settings.GEMINI_API_KEY
-        self.mock_fallback = MockVisionProvider()
+        self.ocr_fallback = RapidOCRVisionProvider()
 
     def extract_memo_stage_a(self, image_bytes: bytes) -> Dict[str, Any]:
         if not self.api_key:
-            return self.mock_fallback.extract_memo_stage_a(image_bytes)
+            return self.ocr_fallback.extract_memo_stage_a(image_bytes)
 
         prompt = """
         You are an expert OCR transcription engine for Bangladeshi handwritten and printed cash memos.
@@ -376,7 +509,7 @@ class GeminiVisionProvider(VisionLLMProvider):
         except Exception as e:
             logger.warning(f"Gemini vision stage A call failed: {e}")
 
-        return self.mock_fallback.extract_memo_stage_a(image_bytes)
+        return self.ocr_fallback.extract_memo_stage_a(image_bytes)
 
     def extract_memo_stage_b(
         self,
@@ -385,7 +518,7 @@ class GeminiVisionProvider(VisionLLMProvider):
         few_shot_examples: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         if not self.api_key:
-            return self.mock_fallback.extract_memo_stage_b(raw_lines, supplier_profile, few_shot_examples)
+            return self.ocr_fallback.extract_memo_stage_b(raw_lines, supplier_profile, few_shot_examples)
 
         prompt = f"""
         You are a layout-agnostic parser for Bangladeshi business cash memos.
@@ -435,11 +568,11 @@ class GeminiVisionProvider(VisionLLMProvider):
         except Exception as e:
             logger.warning(f"Gemini vision stage B call failed: {e}")
 
-        return self.mock_fallback.extract_memo_stage_b(raw_lines, supplier_profile, few_shot_examples)
+        return self.ocr_fallback.extract_memo_stage_b(raw_lines, supplier_profile, few_shot_examples)
 
 
 def get_vision_provider() -> VisionLLMProvider:
     provider = settings.VISION_LLM_PROVIDER.lower()
     if provider == "gemini" and settings.GEMINI_API_KEY:
         return GeminiVisionProvider()
-    return MockVisionProvider()
+    return RapidOCRVisionProvider()

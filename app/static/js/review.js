@@ -141,13 +141,18 @@ export function initReview() {
   function gatherCurrentLines() {
     const lines = [];
     document.querySelectorAll('.line-item-row').forEach((row, idx) => {
-      const lineId = row.getAttribute('data-line-id') || null;
+      const rawLineId = row.getAttribute('data-line-id');
+      const lineId = (rawLineId && rawLineId !== 'null' && rawLineId !== 'undefined' && rawLineId.length === 36) ? rawLineId : null;
+
       const nameInput = row.querySelector('.line-name-input');
       const variantInput = row.querySelector('.line-variant-input');
       const qtyInput = row.querySelector('.line-qty-input');
       const priceInput = row.querySelector('.line-price-input');
       const totalInput = row.querySelector('.line-total-input');
       const variantSelect = row.querySelector('.line-variant-select');
+
+      const varVal = variantSelect ? variantSelect.value : null;
+      const matched_variant_id = (varVal && varVal.length === 36) ? varVal : null;
 
       lines.push({
         id: lineId,
@@ -158,8 +163,8 @@ export function initReview() {
         parsed_unit: 'piece',
         parsed_unit_price: parseFloat(priceInput ? priceInput.value : 0) || 0,
         parsed_line_total: parseFloat(totalInput ? totalInput.value : 0) || 0,
-        matched_variant_id: (variantSelect && variantSelect.value) ? variantSelect.value : null,
-        status: (variantSelect && variantSelect.value) ? 'AUTO_MATCHED' : 'NEEDS_REVIEW'
+        matched_variant_id: matched_variant_id,
+        status: matched_variant_id ? 'AUTO_MATCHED' : 'NEEDS_REVIEW'
       });
     });
     return lines;
@@ -167,6 +172,12 @@ export function initReview() {
 
   // --- 1. SAVE DRAFT HANDLER ---
   async function handleSaveDraft() {
+    const memoStatus = container.getAttribute('data-memo-status');
+    if (memoStatus === 'APPROVED') {
+      window.showToast?.('এই মেমোটি ইতিমধ্যে অনুমোদিত হয়েছে। অনুমোদিত মেমোর তথ্য পরিবর্তন করা সম্ভব নয়।', 'error');
+      return;
+    }
+
     const lines = gatherCurrentLines();
     const btns = [saveDraftBtn, bottomSaveDraftBtn].filter(Boolean);
     btns.forEach(b => {
@@ -178,11 +189,14 @@ export function initReview() {
     const memoNumberInput = document.getElementById('review-memo-number');
     const memoDateInput = document.getElementById('review-memo-date');
 
+    const suppVal = supplierSelect ? supplierSelect.value : null;
+    const supplier_id = (suppVal && suppVal.length === 36) ? suppVal : null;
+
     const payload = {
       lines,
-      supplier_id: supplierSelect ? (supplierSelect.value || null) : undefined,
-      memo_number: memoNumberInput ? (memoNumberInput.value.trim() || null) : undefined,
-      memo_date: memoDateInput ? (memoDateInput.value.trim() || null) : undefined
+      supplier_id: supplier_id,
+      memo_number: memoNumberInput ? (memoNumberInput.value.trim() || null) : null,
+      memo_date: memoDateInput ? (memoDateInput.value.trim() || null) : null
     };
 
     try {

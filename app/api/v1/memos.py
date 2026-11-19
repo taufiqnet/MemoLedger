@@ -102,12 +102,17 @@ async def upload_memo(
         if existing.status == "APPROVED":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"This exact memo has already been approved and committed (Memo #{existing.memo_number or 'N/A'})."
+                detail=f"এই মেমোটি ইতিমধ্যে অনুমোদিত এবং স্টকে সংরক্ষিত হয়েছে (মেমো নং: #{existing.memo_number or 'N/A'})। ডুপ্লিকেট এড়াতে আলাদা মেমোর ছবি আপলোড করুন।"
             )
+        # Re-run extraction pipeline dynamically on the existing unapproved memo
+        from app.services.extraction.pipeline import MemoExtractionPipeline
+        pipeline = MemoExtractionPipeline(db=db)
+        pipeline.run(memo_id=existing.id)
+        db.refresh(existing)
         return MemoUploadResponse(
             memo_id=existing.id,
             status=existing.status,
-            message="Existing unprocessed memo found for this image."
+            message="ছবিটি নতুনভাবে রিড ও সফলভাবে প্রসেস করা হয়েছে।"
         )
 
     # Store in S3 / MinIO / Local storage
