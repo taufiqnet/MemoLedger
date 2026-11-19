@@ -45,6 +45,13 @@ COMMON_ABBREVIATIONS = {
     'sali': 'Salicylic',
     'mas': 'Mascara',
     'lip': 'Lipstick',
+    'bg': 'Bioaqua',
+    'h/oil': 'Hair Oil',
+    'b/c': 'Brightening Cream',
+    'f/wash': 'Face Wash',
+    'f/w': 'Face Wash',
+    'powd': 'Powder',
+    'cu': 'Cucumber',
 }
 
 
