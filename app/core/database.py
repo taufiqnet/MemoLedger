@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 # Determine active database engine
 db_url = settings.DATABASE_URL
+if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 connect_args = {}
 
 if db_url.startswith("sqlite"):

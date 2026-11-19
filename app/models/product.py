@@ -5,14 +5,23 @@ from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
-try:
-    from pgvector.sqlalchemy import Vector
-    VectorType = Vector(384)
-except ImportError:
-    class MockVector(TypeDecorator):
-        impl = JSON
-        cache_ok = True
-    VectorType = MockVector()
+from sqlalchemy.types import TypeDecorator, JSON
+
+class VectorType(TypeDecorator):
+    """
+    Cross-compatible Vector type that stores 384-dim embeddings seamlessly
+    as JSON on standard PostgreSQL & SQLite without requiring native C extensions.
+    """
+    impl = JSON
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is not None and not isinstance(value, list):
+            return list(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        return value
 
 
 class Product(Base):

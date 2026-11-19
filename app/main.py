@@ -19,7 +19,6 @@ from app.models.product import Product, ProductVariant
 from app.models.supplier import Supplier
 from app.models.stock import StockMovement
 
-# Import API Routers
 from app.api.v1.auth import router as auth_router
 from app.api.v1.memos import router as memos_router
 from app.api.v1.products import router as products_router
@@ -28,7 +27,6 @@ from app.api.v1.stock import router as stock_router
 from app.api.v1.reports import router as reports_router
 from app.api.v1.ask_data import router as ask_data_router
 
-# Initialize database schema tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -39,16 +37,13 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Mount Static Files
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# Mount Jinja2 Templates
 templates_dir = os.path.join(os.path.dirname(__file__), "templates")
 templates = Jinja2Templates(directory=templates_dir)
 
-# Register API v1 Routers
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(memos_router, prefix="/api/v1")
 app.include_router(products_router, prefix="/api/v1")
@@ -57,8 +52,6 @@ app.include_router(stock_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(ask_data_router, prefix="/api/v1")
 
-
-# --- HTML Page Routes (Jinja2) ---
 
 @app.get("/", response_class=HTMLResponse)
 def root():
@@ -85,16 +78,19 @@ def dashboard_page(
     variants = db.query(ProductVariant).join(Product).filter(Product.tenant_id == tenant.id).all()
     low_stock_count = sum(1 for v in variants if v.current_stock <= 5)
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "user": current_user,
-        "tenant": tenant,
-        "memos": memos,
-        "total_memos": total_memos,
-        "pending_review": pending_review,
-        "total_spent": total_spent,
-        "low_stock_count": low_stock_count,
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={
+            "user": current_user,
+            "tenant": tenant,
+            "memos": memos,
+            "total_memos": total_memos,
+            "pending_review": pending_review,
+            "total_spent": total_spent,
+            "low_stock_count": low_stock_count,
+        }
+    )
 
 
 @app.get("/upload", response_class=HTMLResponse)
@@ -105,12 +101,15 @@ def upload_page(
     db: Session = Depends(get_db)
 ):
     suppliers = db.query(Supplier).filter(Supplier.tenant_id == tenant.id).all()
-    return templates.TemplateResponse("upload.html", {
-        "request": request,
-        "user": current_user,
-        "tenant": tenant,
-        "suppliers": suppliers,
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="upload.html",
+        context={
+            "user": current_user,
+            "tenant": tenant,
+            "suppliers": suppliers,
+        }
+    )
 
 
 @app.get("/review/{memo_id}", response_class=HTMLResponse)
@@ -149,14 +148,17 @@ def review_page(
         for l in memo.lines
     ]
 
-    return templates.TemplateResponse("review.html", {
-        "request": request,
-        "user": current_user,
-        "tenant": tenant,
-        "memo": memo,
-        "variants": variants,
-        "lines_json": json.dumps(lines_data),
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="review.html",
+        context={
+            "user": current_user,
+            "tenant": tenant,
+            "memo": memo,
+            "variants": variants,
+            "lines_json": json.dumps(lines_data),
+        }
+    )
 
 
 @app.get("/stock", response_class=HTMLResponse)
@@ -171,13 +173,16 @@ def stock_page(
         StockMovement.tenant_id == tenant.id
     ).order_by(desc(StockMovement.created_at)).limit(50).all()
 
-    return templates.TemplateResponse("stock.html", {
-        "request": request,
-        "user": current_user,
-        "tenant": tenant,
-        "variants": variants,
-        "movements": movements,
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="stock.html",
+        context={
+            "user": current_user,
+            "tenant": tenant,
+            "variants": variants,
+            "movements": movements,
+        }
+    )
 
 
 @app.get("/products", response_class=HTMLResponse)
@@ -188,12 +193,15 @@ def products_page(
     db: Session = Depends(get_db)
 ):
     products = db.query(Product).filter(Product.tenant_id == tenant.id).all()
-    return templates.TemplateResponse("products.html", {
-        "request": request,
-        "user": current_user,
-        "tenant": tenant,
-        "products": products,
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="products.html",
+        context={
+            "user": current_user,
+            "tenant": tenant,
+            "products": products,
+        }
+    )
 
 
 @app.get("/suppliers", response_class=HTMLResponse)
@@ -204,12 +212,15 @@ def suppliers_page(
     db: Session = Depends(get_db)
 ):
     suppliers = db.query(Supplier).filter(Supplier.tenant_id == tenant.id).all()
-    return templates.TemplateResponse("suppliers.html", {
-        "request": request,
-        "user": current_user,
-        "tenant": tenant,
-        "suppliers": suppliers,
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="suppliers.html",
+        context={
+            "user": current_user,
+            "tenant": tenant,
+            "suppliers": suppliers,
+        }
+    )
 
 
 @app.get("/ask-data", response_class=HTMLResponse)
@@ -218,8 +229,11 @@ def ask_data_page(
     current_user: User = Depends(get_current_user),
     tenant: Tenant = Depends(get_current_tenant),
 ):
-    return templates.TemplateResponse("ask_data.html", {
-        "request": request,
-        "user": current_user,
-        "tenant": tenant,
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="ask_data.html",
+        context={
+            "user": current_user,
+            "tenant": tenant,
+        }
+    )

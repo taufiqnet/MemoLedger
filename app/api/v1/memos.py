@@ -1,8 +1,9 @@
 import io
+import re
 import uuid
 import hashlib
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -25,35 +26,68 @@ from app.services.exports.whatsapp import WhatsAppShareLink
 router = APIRouter(prefix="/memos", tags=["Memos"])
 
 
+def parse_multipart_fallback(body: bytes, content_type: str):
+    """
+    Pure Python multipart/form-data parser without external C/rust dependencies.
+    """
+    match = re.search(r'boundary=([^;]+)', content_type)
+    if not match:
+        return body, "memo.jpg", None
+
+    boundary = match.group(1).strip().strip('"').encode()
+    delimiter = b'--' + boundary
+    parts = body.split(delimiter)
+
+    file_bytes = None
+    filename = "memo_capture.jpg"
+    supplier_id = None
+
+    for part in parts:
+        if not part or part == b'--\r\n' or part == b'--':
+            continue
+        if b'\r\n\r\n' not in part:
+            continue
+        header_part, content_part = part.split(b'\r\n\r\n', 1)
+        # Strip trailing \r\n
+        if content_part.endswith(b'\r\n'):
+            content_part = content_part[:-2]
+
+        headers_str = header_part.decode('utf-8', errors='ignore')
+        if 'name="file"' in headers_str:
+            fn_match = re.search(r'filename="([^"]+)"', headers_str)
+            if fn_match:
+                filename = fn_match.group(1)
+            file_bytes = content_part
+        elif 'name="supplier_id"' in headers_str:
+            supplier_id = content_part.decode('utf-8', errors='ignore').strip()
+
+    return file_bytes or body, filename, supplier_id
+
+
 @router.post("/upload", response_model=MemoUploadResponse)
 async def upload_memo(
-    file: UploadFile = File(...),
-    supplier_id: Optional[str] = Form(None),
-    notes: Optional[str] = Form(None),
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Idempotent photo upload endpoint with SHA-256 deduplication.
+    Accepts multipart/form-data, direct image bytes, or octet-stream.
     """
-    # 1. Validate File Format
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid file type. Only image files (JPEG, PNG, WebP) are accepted."
-        )
+    content_type = request.headers.get("content-type", "")
+    body_bytes = await request.body()
 
-    file_bytes = await file.read()
-    if len(file_bytes) > 15 * 1024 * 1024:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File size exceeds 15MB limit."
-        )
+    if not body_bytes:
+        raise HTTPException(status_code=400, detail="Empty upload body received.")
 
-    # 2. Compute SHA-256 Hash for Idempotency
+    if len(body_bytes) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 15MB limit.")
+
+    file_bytes, filename, supplier_id = parse_multipart_fallback(body_bytes, content_type)
+
+    # Compute SHA-256 Hash for Idempotency
     image_hash = hashlib.sha256(file_bytes).hexdigest()
 
-    # Check for existing memo with this hash
     existing = db.query(Memo).filter(
         Memo.tenant_id == current_user.tenant_id,
         Memo.image_hash == image_hash
@@ -65,39 +99,36 @@ async def upload_memo(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"This exact memo has already been approved and committed (Memo #{existing.memo_number or 'N/A'})."
             )
-        # If in progress, return existing ID
         return MemoUploadResponse(
             memo_id=existing.id,
             status=existing.status,
             message="Existing unprocessed memo found for this image."
         )
 
-    # 3. Store in S3 / MinIO
-    object_name = f"memos/{current_user.tenant_id}/{image_hash[:16]}_{file.filename}"
-    storage_service.upload_bytes(file_bytes, object_name, content_type=file.content_type)
+    # Store in S3 / MinIO / Local storage
+    object_name = f"memos/{current_user.tenant_id}/{image_hash[:16]}_{filename}"
+    storage_service.upload_bytes(file_bytes, object_name, content_type="image/jpeg")
 
-    # 4. Create Memo Record
     supp_uuid = uuid.UUID(supplier_id) if supplier_id else None
     memo = Memo(
         tenant_id=current_user.tenant_id,
         supplier_id=supp_uuid,
         image_s3_key=object_name,
         image_hash=image_hash,
-        status="PROCESSING",
-        notes=notes
+        status="PROCESSING"
     )
     db.add(memo)
     db.commit()
     db.refresh(memo)
 
-    # 5. Dispatch async background task (with inline fallback)
+    # Run extraction pipeline
     task_id = None
     try:
         from app.workers.tasks import extract_memo_task
         task = extract_memo_task.delay(str(memo.id))
         task_id = task.id
     except Exception:
-        # Inline fallback for environments without Celery/Redis
+        # Inline fallback for standalone web server execution
         from app.services.extraction.pipeline import MemoExtractionPipeline
         pipeline = MemoExtractionPipeline(db=db)
         pipeline.run(memo_id=memo.id)
@@ -170,9 +201,6 @@ def commit_memo(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    One-Tap Approve: commits all approved lines to the append-only stock ledger.
-    """
     lines_dicts = [l.model_dump() for l in commit_data.lines] if commit_data.lines else None
     updated_memo = LedgerService.commit_memo(
         db=db,
@@ -196,9 +224,6 @@ def correct_memo_line(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Feeds user edit into the Learning Loop.
-    """
     line = db.query(MemoLine).filter(MemoLine.id == line_id, MemoLine.memo_id == memo_id).first()
     if not line:
         raise HTTPException(status_code=404, detail="Memo line not found")

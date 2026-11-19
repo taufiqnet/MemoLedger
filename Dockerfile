@@ -1,13 +1,12 @@
 FROM python:3.12-slim
 
-# Avoid prompts from debian
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
-# Install native dependencies for OpenCV, WeasyPrint, and Bengali fonts
+# Install native dependencies for WeasyPrint, OpenCV, and Bengali typography
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -25,16 +24,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-beng \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements/pyproject
-COPY pyproject.toml .
+COPY requirements.txt .
 
-# Install python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy application source
 COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python scripts/seed_data.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

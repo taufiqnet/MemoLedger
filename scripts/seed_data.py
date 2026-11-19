@@ -19,8 +19,27 @@ from app.services.storage import storage_service
 from app.services.extraction.pipeline import MemoExtractionPipeline
 
 
+import time
+
+def wait_for_db(max_retries=15, delay=2):
+    for i in range(max_retries):
+        try:
+            with engine.connect() as conn:
+                from sqlalchemy import text
+                conn.execute(text("SELECT 1"))
+                conn.commit()
+                print("[*] Database is ready.")
+                return True
+        except Exception as e:
+            print(f"[*] Waiting for database to be ready ({i+1}/{max_retries})... {e}")
+            time.sleep(delay)
+    return False
+
 def seed():
     print("--- Starting MemoLedger Database Seeding ---")
+    if not wait_for_db():
+        print("[!] Could not connect to database, aborting seed.")
+        sys.exit(1)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
