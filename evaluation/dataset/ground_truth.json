@@ -1,0 +1,118 @@
+{
+  "memos": [
+    {
+      "id": "k_color_cosmetics_sample_3508",
+      "image_filename": "k_color_memo_sample.jpg",
+      "supplier_name": "K Color Cosmetics",
+      "memo_number": "3508",
+      "memo_date": "19/11/24",
+      "written_total": 3550.0,
+      "lines": [
+        {
+          "line_number": 1,
+          "raw_text": "Sun 625ml (SH) - ১P - ১০৫০",
+          "expected_name": "Sunscreen",
+          "expected_brand": "Sun",
+          "expected_size_value": "625",
+          "expected_size_unit": "ml",
+          "expected_variant": "SH",
+          "expected_qty": 1.0,
+          "expected_unit": "piece",
+          "expected_unit_price": 1050.0,
+          "expected_line_total": 1050.0
+        },
+        {
+          "line_number": 2,
+          "raw_text": "Emeli Lip (928) - ১P - ১৪০",
+          "expected_name": "Emeli Lip Gloss",
+          "expected_brand": "Emeli",
+          "expected_size_value": "1",
+          "expected_size_unit": "pc",
+          "expected_variant": "928",
+          "expected_qty": 1.0,
+          "expected_unit": "piece",
+          "expected_unit_price": 140.0,
+          "expected_line_total": 140.0
+        },
+        {
+          "line_number": 3,
+          "raw_text": "Bath Salt - ১P - ১৫০",
+          "expected_name": "Bath Salt",
+          "expected_brand": "Bath Care",
+          "expected_size_value": "1",
+          "expected_size_unit": "pc",
+          "expected_variant": null,
+          "expected_qty": 1.0,
+          "expected_unit": "piece",
+          "expected_unit_price": 150.0,
+          "expected_line_total": 150.0
+        },
+        {
+          "line_number": 4,
+          "raw_text": "W7 Eye - ১P - ৩৬০",
+          "expected_name": "W7 Eye Shadow",
+          "expected_brand": "W7",
+          "expected_size_value": "1",
+          "expected_size_unit": "pc",
+          "expected_variant": null,
+          "expected_qty": 1.0,
+          "expected_unit": "piece",
+          "expected_unit_price": 360.0,
+          "expected_line_total": 360.0
+        },
+        {
+          "line_number": 5,
+          "raw_text": "BOB: Mas (13) - ১P - ২১০",
+          "expected_name": "BOB: Mascara",
+          "expected_brand": "BOB",
+          "expected_size_value": "1",
+          "expected_size_unit": "pc",
+          "expected_variant": "13",
+          "expected_qty": 1.0,
+          "expected_unit": "piece",
+          "expected_unit_price": 210.0,
+          "expected_line_total": 210.0
+        },
+        {
+          "line_number": 6,
+          "raw_text": "Vase 50ml (J) Co - ১P - ১৫০",
+          "expected_name": "Vaseline Jelly Cocoa Butter",
+          "expected_brand": "Vaseline",
+          "expected_size_value": "50",
+          "expected_size_unit": "ml",
+          "expected_variant": "J Cocoa",
+          "expected_qty": 1.0,
+          "expected_unit": "piece",
+          "expected_unit_price": 150.0,
+          "expected_line_total": 150.0
+        },
+        {
+          "line_number": 7,
+          "raw_text": "Ribana Castor oil - ১P - ৫৫০",
+          "expected_name": "Ribana Castor Oil",
+          "expected_brand": "Ribana",
+          "expected_size_value": "200",
+          "expected_size_unit": "ml",
+          "expected_variant": null,
+          "expected_qty": 1.0,
+          "expected_unit": "piece",
+          "expected_unit_price": 550.0,
+          "expected_line_total": 550.0
+        },
+        {
+          "line_number": 8,
+          "raw_text": "Cosrx Sali (F) - ১P - ৯০০",
+          "expected_name": "Cosrx Salicylic Acid Daily Gentle Cleanser",
+          "expected_brand": "Cosrx",
+          "expected_size_value": "150",
+          "expected_size_unit": "ml",
+          "expected_variant": "F",
+          "expected_qty": 1.0,
+          "expected_unit": "piece",
+          "expected_unit_price": 900.0,
+          "expected_line_total": 900.0
+        }
+      ]
+    }
+  ]
+}

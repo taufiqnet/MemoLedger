@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}স্টক লেজার - MemoLedger{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <div class="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+    <div>
+      <h1 class="text-xl font-bold text-slate-800" data-i18n="stock_ledger">স্টক লেজার ও ইনভেন্টরি</h1>
+      <p class="text-xs text-slate-500 mt-0.5">সব পণ্যের বর্তমান মজুদ ও অপরিবর্তনীয় লেনদেন রেকর্ড (Append-only Ledger)</p>
+    </div>
+  </div>
+
+  <!-- Inventory Summary Cards -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h2 class="text-sm font-bold text-slate-800">বর্তমান স্টক পরিস্থিতি</h2>
+      <span class="text-xs text-slate-500">মোট আইটেম: {{ variants|length }} টি</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs border-collapse">
+        <thead>
+          <tr class="bg-slate-50 text-slate-600 border-b border-slate-200">
+            <th class="p-3">পণ্যের নাম</th>
+            <th class="p-3">ব্র্যান্ড</th>
+            <th class="p-3">সাইজ / ভ্যারিয়েন্ট</th>
+            <th class="p-3 text-right">ক্রয় মূল্য (৳)</th>
+            <th class="p-3 text-right">বিক্রয় মূল্য (৳)</th>
+            <th class="p-3 text-right">বর্তমান স্টক</th>
+            <th class="p-3 text-center">স্ট্যাটাস</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for v in variants %}
+          <tr class="hover:bg-slate-50 transition-all">
+            <td class="p-3 font-semibold text-slate-800">{{ v.product.name }}</td>
+            <td class="p-3 text-slate-500">{{ v.product.brand or "-" }}</td>
+            <td class="p-3 text-slate-600 font-medium">
+              {{ v.size_value or "" }}{{ v.size_unit or "" }}
+              {% if v.variant_code %}<span class="text-teal-700">({{ v.variant_code }})</span>{% endif %}
+            </td>
+            <td class="p-3 text-right">৳{{ "%.2f"|format(v.cost_price) }}</td>
+            <td class="p-3 text-right">৳{{ "%.2f"|format(v.retail_price) }}</td>
+            <td class="p-3 text-right font-bold text-slate-800 text-sm">{{ v.current_stock }} টি</td>
+            <td class="p-3 text-center">
+              {% if v.current_stock <= 2 %}
+              <span class="bg-rose-50 text-rose-700 font-semibold px-2 py-0.5 rounded-full text-[10px]">খুবই কম স্টক</span>
+              {% elif v.current_stock <= 5 %}
+              <span class="bg-amber-50 text-amber-700 font-semibold px-2 py-0.5 rounded-full text-[10px]">কম স্টক</span>
+              {% else %}
+              <span class="bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full text-[10px]">পর্যাপ্ত</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Ledger Movement History -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
+      <h2 class="text-sm font-bold text-slate-800">সাম্প্রতিক স্টক মুভমেন্ট (অপরিবর্তনীয় খতিয়ান)</h2>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs border-collapse">
+        <thead>
+          <tr class="bg-slate-50 text-slate-600 border-b border-slate-200">
+            <th class="p-3">তারিখ</th>
+            <th class="p-3">পণ্য</th>
+            <th class="p-3">টাইপ</th>
+            <th class="p-3 text-right">পরিবর্তন</th>
+            <th class="p-3 text-right">জের (Balance)</th>
+            <th class="p-3">বিবরণ / মেমো</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for m in movements %}
+          <tr class="hover:bg-slate-50 transition-all">
+            <td class="p-3 text-slate-500">{{ m.created_at.strftime('%d-%m-%Y %I:%M %p') }}</td>
+            <td class="p-3 font-medium text-slate-800">{{ m.variant.product.name }}</td>
+            <td class="p-3">
+              <span class="font-semibold text-[11px] {{ 'text-emerald-700' if m.quantity_change > 0 else 'text-rose-700' }}">
+                {{ m.movement_type }}
+              </span>
+            </td>
+            <td class="p-3 text-right font-bold {{ 'text-emerald-700' if m.quantity_change > 0 else 'text-rose-700' }}">
+              {{ "+" if m.quantity_change > 0 else "" }}{{ m.quantity_change }}
+            </td>
+            <td class="p-3 text-right font-bold text-slate-800">{{ m.running_balance }}</td>
+            <td class="p-3 text-slate-500">{{ m.notes or "-" }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="p-6 text-center text-slate-500">এখনো কোনো স্টক মুভমেন্ট নেই। মেমো অনুমোদন করলে এখানে যুক্ত হবে।</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

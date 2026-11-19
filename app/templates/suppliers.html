@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}সরবরাহকারী - MemoLedger{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <div class="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+    <div>
+      <h1 class="text-xl font-bold text-slate-800" data-i18n="suppliers">সরবরাহকারী তালিকা</h1>
+      <p class="text-xs text-slate-500 mt-0.5">পাইকারী ও অনলাইন বিক্রেতাদের ডিরেক্টরি এবং তাদের প্রোফাইল</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for s in suppliers %}
+    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-800">{{ s.name }}</h2>
+          <div class="text-xs text-slate-500 mt-1">ফোন: {{ s.phone or "নেই" }}</div>
+          <div class="text-xs text-slate-500">ঠিকানা: {{ s.address or "নেই" }}</div>
+        </div>
+        <div class="text-right">
+          <span class="text-xs font-semibold bg-teal-50 text-teal-800 px-2.5 py-1 rounded-full">
+            {{ s.memos|length }} টি মেমো
+          </span>
+        </div>
+      </div>
+
+      {% if s.profile %}
+      <div class="border-t border-slate-100 pt-3 text-xs text-slate-600 space-y-1">
+        <div class="font-semibold text-slate-700">সংক্ষিপ্ত রূপ (Learned Abbreviations):</div>
+        <div class="flex flex-wrap gap-1.5 mt-1">
+          {% for k, v in (s.profile.abbreviations or {}).items() %}
+          <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px]">
+            {{ k }} &rarr; {{ v }}
+          </span>
+          {% else %}
+          <span class="text-slate-400">কোনো বিশেষ শর্টহ্যান্ড সংরক্ষিত নেই।</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}
