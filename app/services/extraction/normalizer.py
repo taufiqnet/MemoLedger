@@ -41,10 +41,24 @@ UNIT_SYNONYMS = {
 COMMON_ABBREVIATIONS = {
     'sun': 'Sunscreen',
     'vase': 'Vaseline',
+    'voe': 'Vaseline',
+    'voesam': 'Vaseline',
+    'cocoa': 'Cocoa',
+    'cpq': 'Cocoa',
     'cantor': 'Castor',
+    'contor': 'Castor',
+    'contoral': 'Castor Oil',
+    'ribana': 'Ribana',
+    'qihane': 'Ribana',
     'sali': 'Salicylic',
+    'sxo': 'Cosrx',
+    'cosrx': 'Cosrx',
     'mas': 'Mascara',
     'lip': 'Lipstick',
+    'enel': 'Emeli',
+    'enrelr': 'Emeli',
+    'badt': 'Bath',
+    'salf': 'Salt',
     'bg': 'Bioaqua',
     'h/oil': 'Hair Oil',
     'b/c': 'Brightening Cream',
@@ -52,6 +66,9 @@ COMMON_ABBREVIATIONS = {
     'f/w': 'Face Wash',
     'powd': 'Powder',
     'cu': 'Cucumber',
+    'h0d0': 'Kado',
+    's481': 'Sasi',
+    'aam': 'Zafran',
 }
 
 
@@ -135,6 +152,7 @@ class Normalizer:
     def expand_abbreviations(text: str, supplier_abbrevs: Optional[Dict[str, str]] = None) -> str:
         """
         Expands abbreviations using supplier-scoped mappings first, then general cosmetics abbreviations.
+        Handles punctuation, parentheses, and sub-tokens.
         """
         if not text:
             return ""
@@ -145,15 +163,25 @@ class Normalizer:
             for k, v in supplier_abbrevs.items():
                 mapping[k.lower()] = v
 
-        words = text.split()
-        expanded_words = []
-        for word in words:
-            clean_word = re.sub(r'^[^\w]+|[^\w]+$', '', word).lower()
-            if clean_word in mapping:
-                expanded_words.append(mapping[clean_word])
-            else:
-                expanded_words.append(word)
-        return " ".join(expanded_words)
+        # Normalize OCR confusions for abbreviation lookup
+        def replace_token(tok: str) -> str:
+            clean = tok.lower()
+            if clean in mapping:
+                return mapping[clean]
+            # Strip trailing digits e.g. voesam6 -> voesam, cpq0 -> cpq
+            clean_alpha = re.sub(r'\d+$', '', clean)
+            if clean_alpha in mapping:
+                return mapping[clean_alpha]
+            # Try with 0->o replacement e.g. b0b -> bob
+            clean_o = clean.replace('0', 'o')
+            if clean_o in mapping:
+                return mapping[clean_o]
+            return tok
+
+        # Tokenize preserving spaces and punctuation
+        tokens = re.split(r'([^\w]+)', text)
+        expanded = [replace_token(t) for t in tokens]
+        return "".join(expanded)
 
     @classmethod
     def parse_raw_line_segments(cls, raw_text: str) -> Tuple[str, Optional[str], Optional[str], Optional[str]]:

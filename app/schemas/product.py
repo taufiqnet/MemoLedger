@@ -47,6 +47,16 @@ class ProductCreate(ProductBase):
     variants: Optional[List[ProductVariantCreate]] = None
 
 
+class ProductSimpleCreate(BaseModel):
+    name: str
+    cost_price: Optional[Decimal] = Decimal("0.00")
+    retail_price: Optional[Decimal] = Decimal("0.00")
+
+
+class ProductBulkCreate(BaseModel):
+    names: List[str]
+
+
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     brand: Optional[str] = None

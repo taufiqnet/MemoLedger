@@ -6,6 +6,11 @@ window.openAddProductModal = function() {
   window.openModal('add-product-modal');
 };
 
+window.openBulkProductModal = function() {
+  document.getElementById('bulk-product-form')?.reset();
+  window.openModal('bulk-product-modal');
+};
+
 window.openEditProductModal = function(id, name, brand, type, desc) {
   document.getElementById('edit-p-id').value = id;
   document.getElementById('edit-p-name').value = name;
@@ -68,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. Add Product Form Submit
+  // 2. Add Single Product Form Submit
   const addForm = document.getElementById('add-product-form');
   if (addForm) {
     addForm.addEventListener('submit', async (e) => {
@@ -80,31 +85,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const name = document.getElementById('add-p-name').value.trim();
-      const brand = document.getElementById('add-p-brand').value.trim();
-      const ptype = document.getElementById('add-p-type').value.trim();
+      const brand = document.getElementById('add-p-brand')?.value.trim();
+      const ptype = document.getElementById('add-p-type')?.value.trim();
       
-      const sizeVal = document.getElementById('add-v-size').value.trim();
-      const sizeUnit = document.getElementById('add-v-unit').value.trim();
-      const vCode = document.getElementById('add-v-code').value.trim();
-      const cost = parseFloat(document.getElementById('add-v-cost').value) || 0;
-      const retail = parseFloat(document.getElementById('add-v-retail').value) || 0;
-      const stock = parseFloat(document.getElementById('add-v-stock').value) || 0;
+      const cost = parseFloat(document.getElementById('add-v-cost')?.value) || 0;
+      const retail = parseFloat(document.getElementById('add-v-retail')?.value) || 0;
+      const stock = parseFloat(document.getElementById('add-v-stock')?.value) || 0;
 
       const payload = {
         name: name,
         brand: brand || null,
         product_type: ptype || null,
-        variants: [
-          {
-            size_value: sizeVal || null,
-            size_unit: sizeUnit || null,
-            variant_code: vCode || null,
-            cost_price: cost,
-            retail_price: retail,
-            initial_stock: stock
-          }
-        ]
+        variants: []
       };
+      if (cost > 0 || retail > 0 || stock > 0) {
+        payload.variants.push({
+          cost_price: cost,
+          retail_price: retail,
+          initial_stock: stock
+        });
+      }
 
       try {
         const resp = await fetch('/api/v1/products', {
@@ -126,6 +126,55 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saveBtn) {
           saveBtn.disabled = false;
           saveBtn.innerHTML = `<span>পণ্য সংরক্ষণ করুন (Save Product)</span>`;
+        }
+      }
+    });
+  }
+
+  // 2b. Bulk Add Products Form Submit
+  const bulkForm = document.getElementById('bulk-product-form');
+  if (bulkForm) {
+    bulkForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const saveBtn = document.getElementById('save-bulk-btn');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<span>সংরক্ষণ হচ্ছে...</span>`;
+      }
+
+      const rawText = document.getElementById('bulk-p-names').value;
+      const names = rawText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+
+      if (names.length === 0) {
+        window.showToast?.('অন্তত একটি পণ্যের নাম লিখুন', 'warning');
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = `<span>একসাথে সবগুলো সংরক্ষণ করুন</span>`;
+        }
+        return;
+      }
+
+      try {
+        const resp = await fetch('/api/v1/products/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ names: names })
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json();
+          throw new Error(err.detail || 'Could not import products');
+        }
+
+        const data = await resp.json();
+        window.showToast?.(`${data.created_count} টি পণ্য সফলভাবে যুক্ত হয়েছে!`, 'success');
+        window.closeModal('bulk-product-modal');
+        setTimeout(() => window.location.reload(), 400);
+      } catch (err) {
+        window.showToast?.(`যুক্ত করতে ত্রুটি: ${err.message}`, 'error');
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = `<span>একসাথে সবগুলো সংরক্ষণ করুন</span>`;
         }
       }
     });

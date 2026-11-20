@@ -7,6 +7,9 @@ from app.models.stock import PriceHistory
 from app.services.matching.embeddings import vector_embedder
 
 
+import difflib
+import re
+
 def compute_trigram_similarity(str1: str, str2: str) -> float:
     """
     Computes trigram (3-gram) Dice coefficient similarity between two strings.
@@ -30,6 +33,57 @@ def compute_trigram_similarity(str1: str, str2: str) -> float:
         return 0.0
     intersection = len(grams1 & grams2)
     return (2.0 * intersection) / (len(grams1) + len(grams2))
+
+
+def compute_fuzzy_score(s1: str, s2: str) -> float:
+    """
+    Combines trigram, sequence matcher, and token-level fuzzy ratios with OCR digit normalization.
+    """
+    str1 = (s1 or "").lower().strip()
+    str2 = (s2 or "").lower().strip()
+    if not str1 or not str2:
+        return 0.0
+    if str1 == str2:
+        return 1.0
+
+    # Normalize common OCR confusions: 0->o, 1->l, 5->s, 8->b
+    norm1 = str1.replace('0', 'o').replace('1', 'l').replace('5', 's').replace('8', 'b')
+    norm2 = str2.replace('0', 'o').replace('1', 'l').replace('5', 's').replace('8', 'b')
+
+    tri = compute_trigram_similarity(norm1, norm2)
+    seq = difflib.SequenceMatcher(None, norm1, norm2).ratio()
+
+    toks1 = [t for t in re.split(r'[^a-zA-Z0-9]+', norm1) if len(t) >= 2]
+    toks2 = [t for t in re.split(r'[^a-zA-Z0-9]+', norm2) if len(t) >= 2]
+    tok_score = 0.0
+    if toks1 and toks2:
+        matches = []
+        for t1 in toks1:
+            best_m = 0.0
+            for t2 in toks2:
+                if t1 == t2:
+                    m = 1.0
+                elif t1 in t2 or t2 in t1:
+                    m = 0.85
+                else:
+                    m = difflib.SequenceMatcher(None, t1, t2).ratio()
+                if m > best_m:
+                    best_m = m
+            matches.append(best_m)
+        tok_score = sum(matches) / len(matches)
+
+    return max(tri, seq, tok_score)
+
+
+def _format_display_name(variant: ProductVariant) -> str:
+    parts = []
+    if variant.size_value:
+        parts.append(f"{variant.size_value}{variant.size_unit or ''}".strip())
+    if variant.variant_code:
+        parts.append(variant.variant_code.strip())
+    if parts:
+        return f"{variant.product.name} ({' '.join(parts)})"
+    return variant.product.name
 
 
 class ProductResolver:
@@ -64,7 +118,8 @@ class ProductResolver:
                 if variant:
                     return {
                         "matched_variant_id": str(variant.id),
-                        "matched_product_name": f"{variant.product.name} ({variant.size_value or ''}{variant.size_unit or ''})",
+                        "matched_clean_name": variant.product.name,
+                        "matched_product_name": _format_display_name(variant),
                         "match_confidence": 0.98,
                         "status": "AUTO_MATCHED",
                         "suggestions": [],
@@ -79,6 +134,7 @@ class ProductResolver:
         if not candidates:
             return {
                 "matched_variant_id": None,
+                "matched_clean_name": None,
                 "matched_product_name": None,
                 "match_confidence": 0.0,
                 "status": "MANUAL_ENTRY",
@@ -94,10 +150,10 @@ class ProductResolver:
             cand_brand = candidate.product.brand or ""
             full_cand_text = f"{cand_brand} {cand_name}".strip()
 
-            # Trigram similarity on name
-            trigram_score = max(
-                compute_trigram_similarity(parsed_name, cand_name),
-                compute_trigram_similarity(parsed_name, full_cand_text)
+            # Fuzzy + Trigram score on name
+            base_score = max(
+                compute_fuzzy_score(parsed_name, cand_name),
+                compute_fuzzy_score(parsed_name, full_cand_text)
             )
 
             # Vector cosine similarity
@@ -108,7 +164,7 @@ class ProductResolver:
             vec_score = vector_embedder.cosine_similarity(query_emb, cand_emb)
 
             # Combined base text similarity
-            text_score = (0.5 * trigram_score) + (0.5 * vec_score)
+            text_score = max(base_score, (0.5 * base_score) + (0.5 * vec_score))
 
             # SIZE PENALTY / BONUS (Crucial requirement: different sizes NEVER merge)
             size_modifier = 0.0
@@ -151,7 +207,8 @@ class ProductResolver:
         top_suggestions = [
             {
                 "variant_id": str(c.id),
-                "product_name": f"{c.product.name} ({c.size_value or ''}{c.size_unit or ''} {c.variant_code or ''})".strip(),
+                "clean_name": c.product.name,
+                "product_name": _format_display_name(c),
                 "brand": c.product.brand,
                 "score": round(s, 3),
                 "cost_price": float(c.cost_price)
@@ -163,15 +220,17 @@ class ProductResolver:
         if best_score >= 0.88:
             return {
                 "matched_variant_id": str(best_cand.id),
+                "matched_clean_name": best_cand.product.name,
                 "matched_product_name": top_suggestions[0]["product_name"],
                 "match_confidence": round(best_score, 3),
                 "status": "AUTO_MATCHED",
                 "suggestions": top_suggestions,
                 "flags": []
             }
-        elif best_score >= 0.55:
+        elif best_score >= 0.50:
             return {
                 "matched_variant_id": str(best_cand.id),
+                "matched_clean_name": best_cand.product.name,
                 "matched_product_name": top_suggestions[0]["product_name"],
                 "match_confidence": round(best_score, 3),
                 "status": "SUGGESTION_NEEDED",
@@ -181,6 +240,7 @@ class ProductResolver:
         else:
             return {
                 "matched_variant_id": None,
+                "matched_clean_name": None,
                 "matched_product_name": None,
                 "match_confidence": round(best_score, 3),
                 "status": "MANUAL_ENTRY",

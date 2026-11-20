@@ -12,6 +12,7 @@ from app.services.extraction.arithmetic import ArithmeticReconciler
 from app.services.matching.resolver import ProductResolver
 from app.models.supplier import Supplier, SupplierProfile
 from app.models.memo import Memo, MemoLine, ExtractionRun
+from app.models.product import ProductVariant
 
 
 class MemoExtractionPipeline:
@@ -127,18 +128,34 @@ class MemoExtractionPipeline:
             if resolution.get("matched_variant_id"):
                 matched_id = uuid.UUID(str(resolution["matched_variant_id"]))
 
+            # If matched against product database, use the official clean product name
+            final_name = r_line["parsed_name"]
+            if resolution.get("matched_variant_id") and resolution.get("matched_clean_name"):
+                final_name = resolution["matched_clean_name"]
+
+            unit_price = r_line.get("parsed_unit_price")
+            line_total = r_line.get("parsed_line_total")
+            qty = r_line.get("parsed_qty") or Decimal("1.00")
+
+            # Fallback to catalog variant price if extracted price is 0 or None
+            if (unit_price is None or unit_price == 0) and matched_id:
+                var = self.db.query(ProductVariant).filter(ProductVariant.id == matched_id).first()
+                if var and var.cost_price and var.cost_price > 0:
+                    unit_price = var.cost_price
+                    line_total = qty * unit_price
+
             line_obj = MemoLine(
                 memo_id=memo.id,
                 line_number=idx,
                 bbox=r_line.get("bbox"),
                 script_tag=r_line.get("script_tag"),
                 raw_text=r_line["raw_text"],
-                parsed_name=r_line["parsed_name"],
+                parsed_name=final_name,
                 parsed_variant=r_line.get("parsed_variant"),
-                parsed_qty=r_line["parsed_qty"],
+                parsed_qty=qty,
                 parsed_unit=r_line["parsed_unit"],
-                parsed_unit_price=r_line["parsed_unit_price"],
-                parsed_line_total=r_line["parsed_line_total"],
+                parsed_unit_price=unit_price,
+                parsed_line_total=line_total,
                 matched_variant_id=matched_id,
                 match_confidence=resolution.get("match_confidence", 0.0),
                 status=resolution.get("status", "MANUAL_ENTRY"),

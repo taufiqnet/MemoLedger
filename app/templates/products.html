@@ -12,14 +12,20 @@
       <p class="text-xs md:text-sm text-slate-500 mt-1">সব নিবন্ধিত পণ্য, সাইজ/ভ্যারিয়েন্ট এবং স্টক তালিকা পরিচালনা করুন</p>
     </div>
 
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-2.5">
       <!-- Search Input -->
-      <div class="relative w-full sm:w-64">
-        <input type="text" id="product-search-input" placeholder="পণ্য বা ব্র্যান্ড খুঁজুন..." class="w-full text-xs md:text-sm pl-8 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+      <div class="relative w-full sm:w-60">
+        <input type="text" id="product-search-input" placeholder="পণ্য খুঁজুন..." class="w-full text-xs md:text-sm pl-8 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
         <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
       </div>
 
-      <!-- Add Product Button -->
+      <!-- Bulk Add Button -->
+      <button type="button" onclick="openBulkProductModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3.5 py-2 rounded-lg text-xs md:text-sm border border-slate-300 shadow-sm transition-all flex items-center gap-1.5 min-touch active:scale-95 flex-shrink-0">
+        <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        <span>📋 একসাথে একাধিক পণ্য</span>
+      </button>
+
+      <!-- Add Single Product Button -->
       <button type="button" onclick="openAddProductModal()" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-4 py-2 rounded-lg text-xs md:text-sm shadow-sm transition-all flex items-center gap-1.5 min-touch active:scale-95 flex-shrink-0">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         <span>+ নতুন পণ্য</span>
@@ -110,51 +116,45 @@
     </div>
 
     <form id="add-product-form" class="space-y-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="sm:col-span-2">
-          <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের নাম *</label>
-          <input type="text" id="add-p-name" placeholder="যেমন: Sunscreen Cream" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500" required>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ব্র্যান্ড</label>
-          <input type="text" id="add-p-brand" placeholder="যেমন: Neutrogena" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ক্যাটাগরি / ধরন</label>
-          <input type="text" id="add-p-type" placeholder="যেমন: Skin Care" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500">
-        </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের নাম *</label>
+        <input type="text" id="add-p-name" placeholder="যেমন: Sunscreen 625ml, Bath Salt, W7 Eye" class="w-full text-xs md:text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 font-medium" required>
+        <p class="text-[11px] text-slate-400 mt-1">শুধু পণ্যের নাম লিখলেই হবে, সিস্টেম স্বয়ংক্রিয়ভাবে মেমোর সাথে ম্যাচ করবে।</p>
       </div>
 
-      <!-- Initial Variant Subsection -->
-      <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
-        <span class="text-xs font-bold text-slate-700">প্রারম্ভিক সাইজ ও দর:</span>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-          <div>
-            <label class="block text-[11px] font-semibold text-slate-600 mb-1">সাইজ</label>
-            <input type="text" id="add-v-size" placeholder="যেমন: 625" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
+      <!-- Optional Collapsible Details -->
+      <details class="group bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <summary class="text-xs font-bold text-slate-600 cursor-pointer select-none flex items-center justify-between">
+          <span>+ অতিরিক্ত বিবরণ (ঐচ্ছিক: ব্র্যান্ড, দর, সাইজ)</span>
+          <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div class="mt-3 space-y-3 pt-2 border-t border-slate-200/60">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">ব্র্যান্ড</label>
+              <input type="text" id="add-p-brand" placeholder="যেমন: Neutrogena" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">ক্যাটাগরি / ধরন</label>
+              <input type="text" id="add-p-type" placeholder="যেমন: Skin Care" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
+            </div>
           </div>
-          <div>
-            <label class="block text-[11px] font-semibold text-slate-600 mb-1">একক (Unit)</label>
-            <input type="text" id="add-v-unit" placeholder="যেমন: ml, gm, pc" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
-          </div>
-          <div>
-            <label class="block text-[11px] font-semibold text-slate-600 mb-1">ভ্যারিয়েন্ট কোড</label>
-            <input type="text" id="add-v-code" placeholder="যেমন: SH, 13" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
-          </div>
-          <div>
-            <label class="block text-[11px] font-semibold text-slate-600 mb-1">ক্রয় মূল্য (৳) *</label>
-            <input type="number" step="0.5" id="add-v-cost" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold" required>
-          </div>
-          <div>
-            <label class="block text-[11px] font-semibold text-slate-600 mb-1">বিক্রয় মূল্য (৳) *</label>
-            <input type="number" step="0.5" id="add-v-retail" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold" required>
-          </div>
-          <div>
-            <label class="block text-[11px] font-semibold text-slate-600 mb-1">প্রারম্ভিক স্টক</label>
-            <input type="number" step="1" id="add-v-stock" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold">
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">ক্রয় মূল্য (৳)</label>
+              <input type="number" step="0.5" id="add-v-cost" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">বিক্রয় মূল্য (৳)</label>
+              <input type="number" step="0.5" id="add-v-retail" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">প্রারম্ভিক স্টক</label>
+              <input type="number" step="1" id="add-v-stock" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold">
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
       <div class="pt-2 flex items-center justify-end gap-2.5">
         <button type="button" onclick="closeModal('add-product-modal')" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
@@ -162,6 +162,37 @@
         </button>
         <button type="submit" id="save-product-btn" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-5 py-2.5 rounded-lg text-xs md:text-sm shadow-sm transition-all min-touch">
           পণ্য সংরক্ষণ করুন (Save Product)
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= BULK ADD PRODUCT MODAL ================= -->
+<div id="bulk-product-modal" class="fixed inset-0 bg-slate-900/60 modal-backdrop flex items-center justify-center p-4 z-50 hidden">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl modal-content">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div>
+        <h3 class="text-base md:text-lg font-bold text-slate-800">📋 একসাথে একাধিক পণ্য যোগ করুন</h3>
+        <p class="text-xs text-slate-500 mt-0.5">প্রতি লাইনে একটি করে পণ্যের নাম লিখুন বা পেস্ট করুন</p>
+      </div>
+      <button type="button" onclick="closeModal('bulk-product-modal')" class="text-slate-400 hover:text-slate-600 p-1 font-bold text-lg">✕</button>
+    </div>
+
+    <form id="bulk-product-form" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের নামের তালিকা *</label>
+        <textarea id="bulk-p-names" rows="8" placeholder="Sunscreen 625ml&#10;Emeli Lipstick&#10;Bath Salt&#10;W7 Eye Shadow&#10;BOB Mascara&#10;Vaseline 50ml Cocoa&#10;Ribana Castor Oil&#10;Cosrx Salicylic Acid" class="w-full text-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 font-mono leading-relaxed" required></textarea>
+        <p class="text-[11px] text-slate-400 mt-1">পণ্যগুলো ডাটাবেসে সেভ হবে এবং মেমোর অস্পষ্ট বা হাতের লেখার সাথে স্বয়ংক্রিয়ভাবে নিখুঁত ম্যাচ হবে।</p>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2.5">
+        <button type="button" onclick="closeModal('bulk-product-modal')" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">
+          বাতিল
+        </button>
+        <button type="submit" id="save-bulk-btn" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-5 py-2.5 rounded-lg text-xs md:text-sm shadow-sm transition-all min-touch flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span>একসাথে সবগুলো সংরক্ষণ করুন</span>
         </button>
       </div>
     </form>

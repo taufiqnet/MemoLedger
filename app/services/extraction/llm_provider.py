@@ -52,14 +52,20 @@ class RapidOCRVisionProvider(VisionLLMProvider):
         self._last_written_total = None
 
     def extract_memo_stage_a(self, image_bytes: bytes) -> Dict[str, Any]:
-        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        w_img, h_img = img.size
-        arr = np.array(img)
+        import cv2
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img_bgr is not None:
+            h_img, w_img = img_bgr.shape[:2]
+        else:
+            img_pil = Image.open(io.BytesIO(image_bytes))
+            w_img, h_img = img_pil.size
+            img_bgr = np.array(img_pil.convert("RGB"))[:, :, ::-1]
 
         ocr_blocks = []
         if self.engine:
             try:
-                results, _ = self.engine(arr)
+                results, _ = self.engine(img_bgr)
                 if results:
                     for bbox, text, score in results:
                         ymin = min(pt[1] for pt in bbox)
@@ -78,13 +84,15 @@ class RapidOCRVisionProvider(VisionLLMProvider):
                             "ymin": ymin,
                             "xmin": xmin,
                             "ymax": ymax,
-                            "xmax": xmax
+                            "xmax": xmax,
+                            "cy": (ymin + ymax) / 2.0,
+                            "h": max(1.0, ymax - ymin),
                         })
             except Exception as e:
                 logger.warning(f"RapidOCR execution failed on image: {e}")
 
         # Sort OCR blocks top-to-bottom
-        ocr_blocks.sort(key=lambda b: b["ymin"])
+        ocr_blocks.sort(key=lambda b: b["cy"])
 
         # Detect memo number in top 45% of image
         detected_memo_number = None
@@ -119,20 +127,22 @@ class RapidOCRVisionProvider(VisionLLMProvider):
         body_blocks = [
             b for b in ocr_blocks
             if b["bbox"][0] >= (header_cutoff_y - 15)
-            and b["bbox"][0] <= 760
+            and b["bbox"][0] <= 880
             and not (detected_memo_number and detected_memo_number in b["text"])
             and not (supplier_name and any(w in b["text"].lower() for w in ["color", "kcolor", "cosmetics"]))
             and not (b["bbox"][0] > 700 and re.search(r'\d{5,}', b["text"]))
+            and not (b["bbox"][0] > 700 and any(w in b["text"].lower() for w in ["মোট", "mot", "total"]))
             and len(b["text"].strip()) > 1
         ]
-        body_blocks.sort(key=lambda b: b["ymin"])
+        body_blocks.sort(key=lambda b: b["cy"])
 
         line_clusters = []
         for b in body_blocks:
             placed = False
             for cl in line_clusters:
-                avg_y = sum(item["ymin"] for item in cl) / len(cl)
-                if abs(b["ymin"] - avg_y) < (h_img * 0.025):
+                avg_cy = sum(item["cy"] for item in cl) / len(cl)
+                avg_h = sum(item["h"] for item in cl) / len(cl)
+                if abs(b["cy"] - avg_cy) < (avg_h * 0.55):
                     cl.append(b)
                     placed = True
                     break
@@ -349,7 +359,9 @@ class RapidOCRVisionProvider(VisionLLMProvider):
         Layout-agnostic parser extracting name, variant, quantity, unit, price, and total
         dynamically from arbitrary OCR text tokens.
         """
-        cleaned_raw = raw.strip()
+        from app.services.extraction.normalizer import Normalizer
+        raw_eng = Normalizer.bengali_to_english_digits(raw)
+        cleaned_raw = raw_eng.strip()
 
         # 1. Extract variant if in parentheses e.g. (SH), (928), (c), (F), (D)
         var_match = re.search(r'\(([^)]+)\)', cleaned_raw)
@@ -371,27 +383,27 @@ class RapidOCRVisionProvider(VisionLLMProvider):
 
             if "=" in rest:
                 lhs, rhs = rest.split("=", 1)
-                total_m = re.search(r'([০-৯0-9.]+)', rhs)
+                total_m = re.search(r'([0-9.]+)', rhs)
                 total = total_m.group(1) if total_m else "0"
 
                 mult_parts = re.split(r'[xX*×]', lhs)
                 if len(mult_parts) >= 2:
-                    q_m = re.search(r'([০-৯0-9.]+)\s*([a-zA-ZপিসP]+)?', mult_parts[0])
+                    q_m = re.search(r'([0-9.]+)\s*([a-zA-ZপিসP]+)?', mult_parts[0])
                     if q_m:
                         qty = q_m.group(1)
                         if q_m.group(2):
                             unit = q_m.group(2)
-                    p_m = re.search(r'([০-৯0-9.]+)', mult_parts[1])
+                    p_m = re.search(r'([0-9.]+)', mult_parts[1])
                     if p_m:
                         price = p_m.group(1)
                 else:
-                    p_m = re.search(r'([০-৯0-9.]+)', lhs)
+                    p_m = re.search(r'([0-9.]+)', lhs)
                     if p_m:
                         price = p_m.group(1)
             else:
                 num_tokens = []
                 for pt in parts[1:]:
-                    qm = re.search(r'([০-৯0-9.]+)\s*([a-zA-ZপিসP]+)?', pt)
+                    qm = re.search(r'([0-9.]+)\s*([a-zA-ZপিসP]+)?', pt)
                     if qm:
                         num_tokens.append((qm.group(1), qm.group(2) or "piece"))
                 if len(num_tokens) >= 2:
@@ -403,12 +415,23 @@ class RapidOCRVisionProvider(VisionLLMProvider):
                     price = num_tokens[0][0]
                     total = num_tokens[0][0]
         else:
-            # Single string with numbers
-            nums = re.findall(r'([০-৯0-9.]+)', cleaned_raw)
-            if nums:
-                total = nums[-1]
-                price = nums[-1]
-                name = re.sub(r'([০-৯0-9.]+)', '', cleaned_raw).strip(' -–—:=')
+            # Single string without hyphens or delimiters:
+            # Match trailing standalone price/rate e.g. "Sun 1050" or "Cosrx 900"
+            trailing_num = re.search(r'(?:[-–—:=,\s]|^)([0-9]{2,6})(?:/-)?$', cleaned_raw)
+            if trailing_num:
+                price = trailing_num.group(1)
+                total = trailing_num.group(1)
+                name = cleaned_raw[:trailing_num.start(1)].strip(' -–—:=,/')
+            else:
+                # Look for standalone numbers separated by spaces/punctuation
+                standalone_nums = list(re.finditer(r'(?:^|[\s\-–—:=])([0-9]{2,6})(?:$|[\s\-–—:=/])', cleaned_raw))
+                if standalone_nums:
+                    last_m = standalone_nums[-1]
+                    price = last_m.group(1)
+                    total = last_m.group(1)
+                    name = (cleaned_raw[:last_m.start(1)] + " " + cleaned_raw[last_m.end(1):]).strip(' -–—:=,/ ')
+                else:
+                    name = cleaned_raw
 
         # Clean up name from leading punctuation or line markers
         name = re.sub(r'^[#0-9\.\-–—\s]+', '', name).strip()

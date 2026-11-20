@@ -13,7 +13,10 @@ from app.schemas.product import (
     ProductVariantCreate,
     ProductVariantUpdate,
     ProductVariantResponse,
+    ProductBulkCreate,
+    ProductSimpleCreate,
 )
+from decimal import Decimal
 from app.services.matching.embeddings import vector_embedder
 
 router = APIRouter(prefix="/products", tags=["Products"])
@@ -39,8 +42,8 @@ def create_product(
 ):
     product = Product(
         tenant_id=current_user.tenant_id,
-        name=product_in.name,
-        brand=product_in.brand,
+        name=product_in.name.strip(),
+        brand=product_in.brand.strip() if product_in.brand else None,
         product_type=product_in.product_type,
         description=product_in.description,
     )
@@ -52,20 +55,121 @@ def create_product(
             emb = vector_embedder.embed_text(f"{product.brand or ''} {product.name} {v.size_value or ''}{v.size_unit or ''} {v.variant_code or ''}")
             variant = ProductVariant(
                 product_id=product.id,
-                sku=v.sku,
+                sku=v.sku or f"SKU-{uuid.uuid4().hex[:6].upper()}",
                 size_value=v.size_value,
                 size_unit=v.size_unit,
                 variant_code=v.variant_code,
-                cost_price=v.cost_price,
-                retail_price=v.retail_price,
-                current_stock=getattr(v, 'initial_stock', 0),
+                cost_price=v.cost_price or Decimal("0.00"),
+                retail_price=v.retail_price or Decimal("0.00"),
+                current_stock=getattr(v, 'initial_stock', 0) or 0,
                 embedding=emb,
             )
             db.add(variant)
+    else:
+        # Auto-create default variant for seamless matching and ledger tracking
+        emb = vector_embedder.embed_text(product.name)
+        variant = ProductVariant(
+            product_id=product.id,
+            sku=f"SKU-{uuid.uuid4().hex[:6].upper()}",
+            cost_price=Decimal("0.00"),
+            retail_price=Decimal("0.00"),
+            current_stock=0,
+            embedding=emb,
+        )
+        db.add(variant)
 
     db.commit()
     db.refresh(product)
     return product
+
+
+@router.post("/simple", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
+def create_product_simple(
+    product_in: ProductSimpleCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    name = product_in.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Product name cannot be empty")
+
+    product = Product(
+        tenant_id=current_user.tenant_id,
+        name=name,
+    )
+    db.add(product)
+    db.flush()
+
+    emb = vector_embedder.embed_text(product.name)
+    variant = ProductVariant(
+        product_id=product.id,
+        sku=f"SKU-{uuid.uuid4().hex[:6].upper()}",
+        cost_price=product_in.cost_price or Decimal("0.00"),
+        retail_price=product_in.retail_price or Decimal("0.00"),
+        current_stock=0,
+        embedding=emb,
+    )
+    db.add(variant)
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@router.post("/bulk", status_code=status.HTTP_201_CREATED)
+def bulk_create_products(
+    payload: ProductBulkCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    created = []
+    skipped = []
+    
+    # Flatten names in case user passed a multi-line string or list
+    raw_names = []
+    for item in payload.names:
+        for sub in item.split("\n"):
+            line = sub.strip()
+            if line:
+                raw_names.append(line)
+
+    for name in raw_names:
+        # Check if product with same name exists for this tenant (case-insensitive)
+        existing = db.query(Product).filter(
+            Product.tenant_id == current_user.tenant_id,
+            Product.name.ilike(name)
+        ).first()
+
+        if existing:
+            skipped.append(name)
+            continue
+
+        prod = Product(
+            tenant_id=current_user.tenant_id,
+            name=name
+        )
+        db.add(prod)
+        db.flush()
+
+        emb = vector_embedder.embed_text(name)
+        var = ProductVariant(
+            product_id=prod.id,
+            sku=f"SKU-{uuid.uuid4().hex[:6].upper()}",
+            cost_price=Decimal("0.00"),
+            retail_price=Decimal("0.00"),
+            current_stock=0,
+            embedding=emb,
+        )
+        db.add(var)
+        created.append(name)
+
+    db.commit()
+    return {
+        "status": "SUCCESS",
+        "created_count": len(created),
+        "skipped_count": len(skipped),
+        "created_names": created,
+        "skipped_names": skipped,
+    }
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
