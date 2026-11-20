@@ -63,7 +63,7 @@ def compute_fuzzy_score(s1: str, s2: str) -> float:
             for t2 in toks2:
                 if t1 == t2:
                     m = 1.0
-                elif t1 in t2 or t2 in t1:
+                elif (t1 in t2 or t2 in t1) and min(len(t1), len(t2)) >= 3:
                     m = 0.85
                 else:
                     m = difflib.SequenceMatcher(None, t1, t2).ratio()
@@ -97,15 +97,19 @@ class ProductResolver:
         size_value: Optional[str] = None,
         size_unit: Optional[str] = None,
         unit_price: Optional[Decimal] = None,
+        excluded_variant_ids: Optional[set] = None,
     ) -> Dict[str, Any]:
         """
         Hybrid resolver combining:
         1. Supplier-scoped aliases
         2. Vector embedding similarity (pgvector / multilingual)
-        3. Trigram similarity
+        3. Fuzzy and Trigram similarity on Full Name and Short Name
         4. Strict size agreement & mismatch penalties
         5. Historical supplier price proximity
+        6. Exclusion of already assigned variants to prevent repeats
         """
+        excluded = excluded_variant_ids or set()
+
         # Step 1: Check Supplier-scoped Product Alias first
         if supplier_id and parsed_name:
             alias = db.query(ProductAlias).filter(
@@ -113,7 +117,7 @@ class ProductResolver:
                 ProductAlias.supplier_id == supplier_id,
                 ProductAlias.alias_text.ilike(parsed_name.strip())
             ).first()
-            if alias:
+            if alias and alias.product_variant_id not in excluded:
                 variant = db.query(ProductVariant).filter(ProductVariant.id == alias.product_variant_id).first()
                 if variant:
                     return {
@@ -126,20 +130,34 @@ class ProductResolver:
                         "flags": ["MATCHED_VIA_SUPPLIER_ALIAS"]
                     }
 
-        # Step 2: Query candidate variants for tenant
-        candidates = db.query(ProductVariant).join(Product).filter(
+        # Step 2: Query candidate variants for tenant (excluding already assigned)
+        all_candidates = db.query(ProductVariant).join(Product).filter(
             Product.tenant_id == tenant_id
         ).all()
+
+        candidates = [c for c in all_candidates if c.id not in excluded]
 
         if not candidates:
             return {
                 "matched_variant_id": None,
-                "matched_clean_name": None,
-                "matched_product_name": None,
+                "matched_clean_name": "",
+                "matched_product_name": "",
                 "match_confidence": 0.0,
                 "status": "MANUAL_ENTRY",
                 "suggestions": [],
-                "flags": ["NO_PRODUCTS_IN_TENANT_CATALOG"]
+                "flags": ["NO_AVAILABLE_PRODUCTS_IN_TENANT_CATALOG"]
+            }
+
+        # If parsed_name is empty or purely noise without letters, do not match
+        if not parsed_name or not re.search(r'[a-zA-Z\u0980-\u09FF]{2,}', parsed_name):
+            return {
+                "matched_variant_id": None,
+                "matched_clean_name": "",
+                "matched_product_name": "",
+                "match_confidence": 0.0,
+                "status": "MANUAL_ENTRY",
+                "suggestions": [],
+                "flags": ["EMPTY_OR_NOISY_ITEM_NAME"]
             }
 
         query_emb = vector_embedder.embed_text(parsed_name)
@@ -223,7 +241,9 @@ class ProductResolver:
         ]
 
         # Decision Triage
-        if best_score >= 0.88:
+        # If score >= 0.65: Auto-match cleanly to the full product name
+        # If score < 0.65: Leave product name BLANK per user instruction, preserving price
+        if best_score >= 0.65:
             return {
                 "matched_variant_id": str(best_cand.id),
                 "matched_clean_name": best_cand.product.name,
@@ -233,23 +253,13 @@ class ProductResolver:
                 "suggestions": top_suggestions,
                 "flags": []
             }
-        elif best_score >= 0.50:
-            return {
-                "matched_variant_id": str(best_cand.id),
-                "matched_clean_name": best_cand.product.name,
-                "matched_product_name": top_suggestions[0]["product_name"],
-                "match_confidence": round(best_score, 3),
-                "status": "SUGGESTION_NEEDED",
-                "suggestions": top_suggestions,
-                "flags": ["CONFIDENCE_BELOW_AUTO_MATCH_THRESHOLD"]
-            }
         else:
             return {
                 "matched_variant_id": None,
-                "matched_clean_name": None,
-                "matched_product_name": None,
+                "matched_clean_name": "",  # Blank name for unclear item
+                "matched_product_name": "",
                 "match_confidence": round(best_score, 3),
                 "status": "MANUAL_ENTRY",
                 "suggestions": top_suggestions,
-                "flags": ["NO_CONFIDENT_CATALOG_MATCH"]
+                "flags": ["UNCLEAR_ITEM_NAME_BLANKED"]
             }

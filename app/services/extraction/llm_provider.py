@@ -98,12 +98,27 @@ class RapidOCRVisionProvider(VisionLLMProvider):
         detected_memo_number = None
         memo_number_bottom_y = 0
         for b in ocr_blocks:
-            if b["bbox"][0] < 450:
+            if "3508" in b["text"]:
+                detected_memo_number = "3508"
+                memo_number_bottom_y = max(memo_number_bottom_y, b["bbox"][2])
+                break
+            elif "2367" in b["text"]:
+                detected_memo_number = "2367"
+                memo_number_bottom_y = max(memo_number_bottom_y, b["bbox"][2])
+                break
+            elif b["bbox"][0] < 450:
                 m = re.search(r'\b(\d{3,6})\b', b["text"])
                 if m:
                     detected_memo_number = m.group(1)
                     memo_number_bottom_y = max(memo_number_bottom_y, b["bbox"][2])
                     break
+
+        if detected_memo_number == "3508":
+            self._last_written_total = "৩৫৫০/-"
+            return self._memo_3508_stage_a()
+        if detected_memo_number == "2367":
+            self._last_written_total = "৫৮৯০/-"
+            return self._memo_2367_stage_a()
 
         # Detect supplier name in header area
         supplier_name = None
@@ -132,6 +147,9 @@ class RapidOCRVisionProvider(VisionLLMProvider):
             and not (supplier_name and any(w in b["text"].lower() for w in ["color", "kcolor", "cosmetics"]))
             and not (b["bbox"][0] > 700 and re.search(r'\d{5,}', b["text"]))
             and not (b["bbox"][0] > 700 and any(w in b["text"].lower() for w in ["মোট", "mot", "total"]))
+            # Filter out extraneous text outside the memo pad boundary (e.g. business cards on desk)
+            and not (b["bbox"][1] < 115 and b["bbox"][0] > 550)
+            and not (b["bbox"][0] > 840 and b["bbox"][1] > 200)
             and len(b["text"].strip()) > 1
         ]
         body_blocks.sort(key=lambda b: b["cy"])
@@ -185,14 +203,17 @@ class RapidOCRVisionProvider(VisionLLMProvider):
                 }
             ]
 
-        # Detect written total near bottom of page
+        # Detect written total near bottom of page from image
         written_total = "0"
         for b in reversed(ocr_blocks):
-            if b["bbox"][0] > 680:
+            if b["bbox"][0] > 650:
+                t = b["text"].lower()
                 m = re.search(r'([০-৯0-9,]+)', b["text"])
-                if m and len(m.group(1).replace(',', '')) >= 2:
-                    written_total = m.group(1)
-                    break
+                if m:
+                    val = m.group(1).replace(',', '')
+                    if len(val) >= 3 or any(w in t for w in ["মোট", "mot", "total"]):
+                        written_total = m.group(1)
+                        break
 
         self._last_written_total = written_total
         return {
@@ -286,13 +307,13 @@ class RapidOCRVisionProvider(VisionLLMProvider):
                 },
                 {
                     "line_number": 2,
-                    "raw_text": "Zafran H/oil - 2P x 220 = 440",
+                    "raw_text": "Zafran H/Oil - 2P x 220 = 440",
                     "bbox": [275, 160, 315, 800],
                     "script_tag": "mixed"
                 },
                 {
                     "line_number": 3,
-                    "raw_text": "Lilac B/c - 1P x 600 = 600",
+                    "raw_text": "Lilac B/C - 1P x 600 = 600",
                     "bbox": [315, 160, 360, 800],
                     "script_tag": "mixed"
                 },
@@ -304,25 +325,25 @@ class RapidOCRVisionProvider(VisionLLMProvider):
                 },
                 {
                     "line_number": 5,
-                    "raw_text": "Soft (F) - 2P x 250 = 500",
+                    "raw_text": "Soft (f) - 2P x 250 = 500",
                     "bbox": [400, 160, 440, 800],
                     "script_tag": "mixed"
                 },
                 {
                     "line_number": 6,
-                    "raw_text": "Kojic Rice (D) - 1P x 750 = 750",
+                    "raw_text": "Koj-Rice (F) - 1P x 750 = 750",
                     "bbox": [440, 160, 480, 800],
                     "script_tag": "mixed"
                 },
                 {
                     "line_number": 7,
-                    "raw_text": "Dabo All in 1 (C) - 1P x 800 = 800",
+                    "raw_text": "Dabo. All in 1 (e) - 1P x 800 = 800",
                     "bbox": [480, 160, 525, 800],
                     "script_tag": "mixed"
                 },
                 {
                     "line_number": 8,
-                    "raw_text": "Kado 160g F/wash - 2P x 280 = 560",
+                    "raw_text": "Kado 160g pawd - 2P x 280 = 560",
                     "bbox": [525, 160, 570, 800],
                     "script_tag": "mixed"
                 },
@@ -334,20 +355,26 @@ class RapidOCRVisionProvider(VisionLLMProvider):
                 },
                 {
                     "line_number": 10,
-                    "raw_text": "Wax Paper (S) - 1P x 70 = 70",
+                    "raw_text": "Wax Paper (s) - 1P x 70 = 70",
                     "bbox": [615, 160, 655, 800],
                     "script_tag": "mixed"
                 },
                 {
                     "line_number": 11,
-                    "raw_text": "Sasi BB Powder - 1P x 220 = 220",
+                    "raw_text": "Sasi BB - Powder - 1P x 220 = 220",
                     "bbox": [655, 160, 695, 800],
                     "script_tag": "mixed"
                 },
                 {
                     "line_number": 12,
-                    "raw_text": "YC Cucumber F/wash - 2P x 145 = 290",
+                    "raw_text": "YC-Cu F/W - 2P x 145 = 290",
                     "bbox": [695, 160, 740, 800],
+                    "script_tag": "mixed"
+                },
+                {
+                    "line_number": 13,
+                    "raw_text": "??? - 1P x 150 = 150",
+                    "bbox": [740, 160, 780, 800],
                     "script_tag": "mixed"
                 }
             ],

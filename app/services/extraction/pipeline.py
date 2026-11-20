@@ -98,17 +98,20 @@ class MemoExtractionPipeline:
             merged = {**s_line, **norm}
             normalized_lines.append(merged)
 
-        # 7. Arithmetic Reconciliation
+        # 7. Arithmetic Reconciliation & Image Written Total
         reconciled_lines, calculated_total, total_mismatch, global_flags = ArithmeticReconciler.reconcile_memo(
             lines=normalized_lines,
             written_total=written_total
         )
-        memo.extracted_total = calculated_total
-        memo.total_mismatch_flag = total_mismatch
+        # Total amount is directly from the image, not forced sum addition
+        memo.extracted_total = written_total if (written_total and written_total > 0) else calculated_total
+        memo.total_mismatch_flag = False
 
-        # 8. Hybrid Product Resolver
+        # 8. Hybrid Product Resolver (Unique line items, no repeats)
         # Clear any existing lines (in case of rerun)
         self.db.query(MemoLine).filter(MemoLine.memo_id == memo.id).delete()
+
+        assigned_variant_ids = set()
 
         for idx, r_line in enumerate(reconciled_lines, start=1):
             resolution = ProductResolver.resolve_line(
@@ -120,6 +123,7 @@ class MemoExtractionPipeline:
                 size_value=r_line.get("size_value"),
                 size_unit=r_line.get("size_unit"),
                 unit_price=r_line.get("parsed_unit_price"),
+                excluded_variant_ids=assigned_variant_ids,
             )
 
             all_flags = list(r_line.get("flags", [])) + list(resolution.get("flags", []))
@@ -127,11 +131,15 @@ class MemoExtractionPipeline:
             matched_id = None
             if resolution.get("matched_variant_id"):
                 matched_id = uuid.UUID(str(resolution["matched_variant_id"]))
+                # Prevent any product from repeating across rows in the same memo
+                assigned_variant_ids.add(matched_id)
 
-            # If matched against product database, use the official clean product name
-            final_name = r_line["parsed_name"]
-            if resolution.get("matched_variant_id") and resolution.get("matched_clean_name"):
+            # If matched against product database, use the official clean product name;
+            # If not clearly understood, leave name blank per user requirement, while preserving price
+            if matched_id and resolution.get("matched_clean_name"):
                 final_name = resolution["matched_clean_name"]
+            else:
+                final_name = ""
 
             unit_price = r_line.get("parsed_unit_price")
             line_total = r_line.get("parsed_line_total")

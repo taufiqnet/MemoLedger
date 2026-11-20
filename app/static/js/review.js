@@ -112,6 +112,22 @@ export function initReview() {
       const idx = parseInt(row.getAttribute('data-line-idx'), 10);
       if (!isNaN(idx)) highlightLine(idx);
     });
+
+    tableBody.addEventListener('change', (e) => {
+      if (e.target.classList.contains('line-variant-select')) {
+        const select = e.target;
+        const row = select.closest('.line-item-row');
+        if (!row) return;
+        const nameInput = row.querySelector('.line-name-input');
+        if (select.selectedIndex > 0 && nameInput) {
+          const optText = select.options[select.selectedIndex].text;
+          const cleanName = optText.split('(')[0].split('-')[0].trim();
+          if (cleanName) {
+            nameInput.value = cleanName;
+          }
+        }
+      }
+    });
   }
 
   function recalculateGrandTotal() {

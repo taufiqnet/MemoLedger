@@ -157,6 +157,18 @@ class TestMemoLedger(unittest.TestCase):
     def test_duplicate_memo(self):
         tenant = self.db.query(Tenant).filter(Tenant.slug == "dhaka-cosmetics-mart").first()
         sample_memo = self.db.query(Memo).first()
+        if not sample_memo:
+            import uuid
+            sample_memo = Memo(
+                id=uuid.uuid4(),
+                tenant_id=tenant.id,
+                memo_number="TEST-DUP-01",
+                image_s3_key="test_dup.jpg",
+                image_hash="test_dup_hash_12345",
+                status="DRAFT"
+            )
+            self.db.add(sample_memo)
+            self.db.commit()
         sample_memo.status = "APPROVED"
         self.db.commit()
         self.assertTrue(LedgerService.check_duplicate_memo(self.db, tenant.id, sample_memo.image_hash))

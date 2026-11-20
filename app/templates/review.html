@@ -230,7 +230,8 @@
               <td class="p-2 space-y-1">
                 <input type="text" 
                        class="line-name-input w-full p-2 border border-slate-300 rounded font-bold text-xs focus:ring-1 focus:ring-teal-500 {{ 'bg-slate-100 text-slate-600' if memo.status == 'APPROVED' else '' }}" 
-                       value="{{ line.parsed_name or line.raw_text }}"
+                       value="{{ line.parsed_name or '' }}"
+                       placeholder="পণ্যের নাম লিখুন বা নির্বাচন করুন..."
                        {{ 'readonly disabled' if memo.status == 'APPROVED' else '' }}>
                 <div class="text-[10px] text-slate-400 truncate">লেখা: {{ line.raw_text }}</div>
 
