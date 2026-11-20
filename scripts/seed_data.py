@@ -111,19 +111,40 @@ def seed():
         else:
             print(f"[*] Supplier exists: {supplier.name}")
 
-        # 4. Seed Canonical Products & Variants
+        # 4. Seed Canonical Products & Variants with Short Names
         catalog_data = [
+            # Original Canonical Products with short_name
             {
                 "name": "Sunscreen",
+                "short_name": "Sun 625ml (SH)",
                 "brand": "Sun",
                 "type": "Skin Care",
                 "variants": [
                     {"size_value": "625", "size_unit": "ml", "variant_code": "SH", "cost": 1050, "retail": 1250, "stock": 10},
-                    {"size_value": "100", "size_unit": "ml", "variant_code": "SH", "cost": 350, "retail": 450, "stock": 5}, # Test size isolation
+                    {"size_value": "100", "size_unit": "ml", "variant_code": "SH", "cost": 350, "retail": 450, "stock": 5},
+                ]
+            },
+            {
+                "name": "Sunscreen Cream 625ml",
+                "short_name": "Sun 625ml (SH)",
+                "brand": "Sun",
+                "type": "Skin Care",
+                "variants": [
+                    {"size_value": "625", "size_unit": "ml", "variant_code": "SH", "cost": 1050, "retail": 1250, "stock": 10}
                 ]
             },
             {
                 "name": "Emeli Lip Gloss",
+                "short_name": "Emeli Lip (928)",
+                "brand": "Emeli",
+                "type": "Lip Makeup",
+                "variants": [
+                    {"size_value": "1", "size_unit": "pc", "variant_code": "928", "cost": 140, "retail": 190, "stock": 15}
+                ]
+            },
+            {
+                "name": "Emeli Matte Lipstick",
+                "short_name": "Emeli Lip (928)",
                 "brand": "Emeli",
                 "type": "Lip Makeup",
                 "variants": [
@@ -132,6 +153,7 @@ def seed():
             },
             {
                 "name": "Bath Salt",
+                "short_name": "Bath Salt",
                 "brand": "Bath Care",
                 "type": "Body Care",
                 "variants": [
@@ -140,6 +162,7 @@ def seed():
             },
             {
                 "name": "W7 Eye Shadow",
+                "short_name": "W7 Eye",
                 "brand": "W7",
                 "type": "Eye Makeup",
                 "variants": [
@@ -147,7 +170,26 @@ def seed():
                 ]
             },
             {
+                "name": "W7 Eye Shadow Palette",
+                "short_name": "W7 Eye",
+                "brand": "W7",
+                "type": "Eye Makeup",
+                "variants": [
+                    {"size_value": "1", "size_unit": "pc", "variant_code": None, "cost": 200, "retail": 260, "stock": 10}
+                ]
+            },
+            {
                 "name": "BOB: Mascara",
+                "short_name": "BOB: Mas (13)",
+                "brand": "BOB",
+                "type": "Eye Makeup",
+                "variants": [
+                    {"size_value": "1", "size_unit": "pc", "variant_code": "13", "cost": 210, "retail": 290, "stock": 20}
+                ]
+            },
+            {
+                "name": "BOB Long Lash Mascara",
+                "short_name": "BOB: Mas (13)",
                 "brand": "BOB",
                 "type": "Eye Makeup",
                 "variants": [
@@ -156,15 +198,26 @@ def seed():
             },
             {
                 "name": "Vaseline Jelly Cocoa Butter",
+                "short_name": "Vase 50ml (J) Co",
                 "brand": "Vaseline",
                 "type": "Skin Care",
                 "variants": [
                     {"size_value": "50", "size_unit": "ml", "variant_code": "J Cocoa", "cost": 150, "retail": 200, "stock": 15},
-                    {"size_value": "100", "size_unit": "ml", "variant_code": "J Cocoa", "cost": 280, "retail": 350, "stock": 6}, # Different size must never merge!
+                    {"size_value": "100", "size_unit": "ml", "variant_code": "J Cocoa", "cost": 280, "retail": 350, "stock": 6},
                 ]
             },
             {
                 "name": "Ribana Castor Oil",
+                "short_name": "Ribana Castor oil",
+                "brand": "Ribana",
+                "type": "Hair & Skin Oil",
+                "variants": [
+                    {"size_value": "200", "size_unit": "ml", "variant_code": None, "cost": 550, "retail": 700, "stock": 14}
+                ]
+            },
+            {
+                "name": "Ribana Organic Castor Oil",
+                "short_name": "Ribana Castor oil",
                 "brand": "Ribana",
                 "type": "Hair & Skin Oil",
                 "variants": [
@@ -173,10 +226,120 @@ def seed():
             },
             {
                 "name": "Cosrx Salicylic Acid Daily Gentle Cleanser",
+                "short_name": "Cosrx Sali (F)",
                 "brand": "Cosrx",
                 "type": "Facial Cleanser",
                 "variants": [
                     {"size_value": "150", "size_unit": "ml", "variant_code": "F", "cost": 900, "retail": 1150, "stock": 7}
+                ]
+            },
+            {
+                "name": "Cosrx Salicylic Acid Gentle Cleanser",
+                "short_name": "Cosrx Sali (F)",
+                "brand": "Cosrx",
+                "type": "Facial Cleanser",
+                "variants": [
+                    {"size_value": "150", "size_unit": "ml", "variant_code": "F", "cost": 900, "retail": 1150, "stock": 7}
+                ]
+            },
+            # Explicit user-requested products with Short Names
+            {
+                "name": "Lilac Brightening Cream",
+                "short_name": "Lilac B/C",
+                "brand": "Lilac",
+                "type": "Face Cream",
+                "variants": [
+                    {"size_value": "50", "size_unit": "g", "variant_code": None, "cost": 600, "retail": 750, "stock": 10}
+                ]
+            },
+            {
+                "name": "Zafran Hair Growth Therapy",
+                "short_name": "Zafran H/Oil",
+                "brand": "Zafran",
+                "type": "Hair Oil",
+                "variants": [
+                    {"size_value": "100", "size_unit": "ml", "variant_code": None, "cost": 220, "retail": 300, "stock": 12}
+                ]
+            },
+            {
+                "name": "Soft Finish Sun Milk",
+                "short_name": "Soft (f)",
+                "brand": "Missha",
+                "type": "Sun Care",
+                "variants": [
+                    {"size_value": "70", "size_unit": "ml", "variant_code": "F", "cost": 250, "retail": 350, "stock": 8}
+                ]
+            },
+            {
+                "name": "YC Cucumber Face Wash",
+                "short_name": "YC-Cu F/W",
+                "brand": "YC",
+                "type": "Face Wash",
+                "variants": [
+                    {"size_value": "100", "size_unit": "ml", "variant_code": None, "cost": 145, "retail": 195, "stock": 15}
+                ]
+            },
+            {
+                "name": "SASI BB Perfect Powder",
+                "short_name": "Sasi BB - Powder",
+                "brand": "SASI",
+                "type": "Loose Powder",
+                "variants": [
+                    {"size_value": "50", "size_unit": "g", "variant_code": None, "cost": 220, "retail": 280, "stock": 15}
+                ]
+            },
+            {
+                "name": "Bioaqua Nose Blackhead Strip",
+                "short_name": "BG N/Strip",
+                "brand": "Bioaqua",
+                "type": "Nose Strip",
+                "variants": [
+                    {"size_value": "1", "size_unit": "pc", "variant_code": None, "cost": 18, "retail": 25, "stock": 50}
+                ]
+            },
+            {
+                "name": "Kojic Acid Rice Face Wash",
+                "short_name": "Koj-Rice (F)",
+                "brand": "Kojic",
+                "type": "Face Wash",
+                "variants": [
+                    {"size_value": "100", "size_unit": "ml", "variant_code": "F", "cost": 750, "retail": 900, "stock": 10}
+                ]
+            },
+            {
+                "name": "Dabo All In One Cream",
+                "short_name": "Dabo. All in 1 (e)",
+                "brand": "Dabo",
+                "type": "Face Cream",
+                "variants": [
+                    {"size_value": "100", "size_unit": "g", "variant_code": "E", "cost": 800, "retail": 950, "stock": 8}
+                ]
+            },
+            {
+                "name": "Kado 160g Face Wash Powder",
+                "short_name": "Kado 160g pawd",
+                "brand": "Kado",
+                "type": "Powder Cleanser",
+                "variants": [
+                    {"size_value": "160", "size_unit": "g", "variant_code": None, "cost": 280, "retail": 350, "stock": 10}
+                ]
+            },
+            {
+                "name": "Mango Hair Removal Wax",
+                "short_name": "Mango Wax",
+                "brand": "Mango",
+                "type": "Hair Removal",
+                "variants": [
+                    {"size_value": "100", "size_unit": "g", "variant_code": None, "cost": 300, "retail": 400, "stock": 12}
+                ]
+            },
+            {
+                "name": "Wax Strips Paper",
+                "short_name": "Wax Paper (s)",
+                "brand": "Generic",
+                "type": "Wax Paper",
+                "variants": [
+                    {"size_value": "1", "size_unit": "pack", "variant_code": "S", "cost": 70, "retail": 100, "stock": 20}
                 ]
             }
         ]
@@ -191,11 +354,20 @@ def seed():
                 prod = Product(
                     tenant_id=tenant.id,
                     name=item["name"],
+                    short_name=item.get("short_name"),
                     brand=item["brand"],
                     product_type=item["type"],
                     description=f"Authentic {item['brand']} cosmetic item."
                 )
                 db.add(prod)
+                db.flush()
+            else:
+                if item.get("short_name"):
+                    prod.short_name = item.get("short_name")
+                if item.get("brand"):
+                    prod.brand = item["brand"]
+                if item.get("type"):
+                    prod.product_type = item["type"]
                 db.flush()
 
             for v in item["variants"]:
@@ -207,9 +379,10 @@ def seed():
                     ProductVariant.variant_code == cand_code
                 ).first()
 
+                text_for_emb = f"{prod.name} {prod.short_name or ''} {prod.brand or ''} {size_v or ''} {cand_code or ''}".strip()
+                emb = vector_embedder.embed_text(text_for_emb)
+
                 if not existing_variant:
-                    text_for_emb = f"{prod.brand} {prod.name} {size_v or ''} {cand_code or ''}".strip()
-                    emb = vector_embedder.embed_text(text_for_emb)
                     existing_variant = ProductVariant(
                         product_id=prod.id,
                         size_value=size_v,
@@ -222,12 +395,17 @@ def seed():
                     )
                     db.add(existing_variant)
                     db.flush()
+                else:
+                    existing_variant.cost_price = Decimal(str(v["cost"]))
+                    existing_variant.retail_price = Decimal(str(v["retail"]))
+                    existing_variant.embedding = emb
+                    db.flush()
                 
                 key = f"{prod.name}_{size_v}_{cand_code}"
                 variant_lookup[key] = existing_variant
 
         db.commit()
-        print(f"[+] Seeded {len(catalog_data)} products and all variants with vector embeddings.")
+        print(f"[+] Seeded {len(catalog_data)} products and all variants with short names and vector embeddings.")
 
         # 5. Seed Supplier Product Aliases
         alias_seed = [
@@ -257,36 +435,37 @@ def seed():
         db.commit()
         print("[+] Seeded Supplier-scoped aliases.")
 
-        # 6. Seed Sample Memo using the uploaded reference image
-        sample_img_path = os.path.join(os.path.dirname(__file__), "..", "evaluation", "dataset", "sample_memos", "k_color_memo_sample.jpg")
-        if os.path.exists(sample_img_path):
-            with open(sample_img_path, "rb") as f:
-                img_bytes = f.read()
-            img_hash = hashlib.sha256(img_bytes).hexdigest()
+        # 6. Seed Sample Memo (Optional, only if SEED_SAMPLE_MEMO=true)
+        if os.getenv("SEED_SAMPLE_MEMO", "false").lower() == "true":
+            sample_img_path = os.path.join(os.path.dirname(__file__), "..", "evaluation", "dataset", "sample_memos", "k_color_memo_sample.jpg")
+            if os.path.exists(sample_img_path):
+                with open(sample_img_path, "rb") as f:
+                    img_bytes = f.read()
+                img_hash = hashlib.sha256(img_bytes).hexdigest()
 
-            sample_memo = db.query(Memo).filter(Memo.image_hash == img_hash).first()
-            if not sample_memo:
-                s3_key = f"memos/{tenant.id}/k_color_sample_3508.jpg"
-                storage_service.upload_bytes(img_bytes, s3_key)
-                sample_memo = Memo(
-                    tenant_id=tenant.id,
-                    supplier_id=supplier.id,
-                    memo_number="3508",
-                    memo_date="১৯/১১/২৪",
-                    image_s3_key=s3_key,
-                    image_hash=img_hash,
-                    status="PROCESSING"
-                )
-                db.add(sample_memo)
-                db.commit()
-                db.refresh(sample_memo)
+                sample_memo = db.query(Memo).filter(Memo.image_hash == img_hash).first()
+                if not sample_memo:
+                    s3_key = f"memos/{tenant.id}/k_color_sample_3508.jpg"
+                    storage_service.upload_bytes(img_bytes, s3_key)
+                    sample_memo = Memo(
+                        tenant_id=tenant.id,
+                        supplier_id=supplier.id,
+                        memo_number="3508",
+                        memo_date="১৯/১১/২৪",
+                        image_s3_key=s3_key,
+                        image_hash=img_hash,
+                        status="PROCESSING"
+                    )
+                    db.add(sample_memo)
+                    db.commit()
+                    db.refresh(sample_memo)
 
-                # Run extraction pipeline
-                pipeline = MemoExtractionPipeline(db=db)
-                pipeline.run(sample_memo.id)
-                print(f"[+] Sample Memo #3508 processed! Extracted {len(sample_memo.lines)} lines. Status: {sample_memo.status}")
-            else:
-                print(f"[*] Sample Memo #3508 already exists (Status: {sample_memo.status})")
+                    # Run extraction pipeline
+                    pipeline = MemoExtractionPipeline(db=db)
+                    pipeline.run(sample_memo.id)
+                    print(f"[+] Sample Memo #3508 processed! Extracted {len(sample_memo.lines)} lines. Status: {sample_memo.status}")
+                else:
+                    print(f"[*] Sample Memo #3508 already exists (Status: {sample_memo.status})")
 
     finally:
         db.close()
