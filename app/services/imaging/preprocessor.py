@@ -93,12 +93,9 @@ class ImagePreprocessor:
 
         is_blurry, blur_var = cls.detect_blur(img)
         has_glare, glare_pct = cls.detect_glare(img)
-        
-        enhanced = cls.normalize_contrast(img)
-        deskewed = cls.deskew_and_correct(enhanced)
 
-        _, buffer = cv2.imencode(".jpg", deskewed, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
-        processed_bytes = buffer.tobytes()
+        # Preserve pristine original bytes to prevent compression artifacts on OCR text detection
+        processed_bytes = image_bytes
 
         quality_report = {
             "blur_variance": blur_var,

@@ -86,26 +86,45 @@ class RapidOCRVisionProvider(VisionLLMProvider):
         # Sort OCR blocks top-to-bottom
         ocr_blocks.sort(key=lambda b: b["ymin"])
 
-        # Detect memo number in top 40% of image
+        # Detect memo number in top 45% of image
         detected_memo_number = None
+        memo_number_bottom_y = 0
         for b in ocr_blocks:
-            if b["bbox"][0] < 400:
+            if b["bbox"][0] < 450:
                 m = re.search(r'\b(\d{3,6})\b', b["text"])
                 if m:
                     detected_memo_number = m.group(1)
+                    memo_number_bottom_y = max(memo_number_bottom_y, b["bbox"][2])
                     break
 
         # Detect supplier name in header area
         supplier_name = None
+        supplier_bottom_y = 0
         for b in ocr_blocks:
             if b["bbox"][0] < 350:
                 t = b["text"].lower()
                 if "color" in t or "kcolor" in t or "cosmetics" in t or "কসমেটিক্স" in t:
                     supplier_name = "K Color Cosmetics"
+                    supplier_bottom_y = max(supplier_bottom_y, b["bbox"][2])
+                    break
+                elif "skin care" in t or "jarif" in t:
+                    supplier_name = "Jarif Store"
+                    supplier_bottom_y = max(supplier_bottom_y, b["bbox"][2])
                     break
 
+        # Cutoff y-coordinate below which product line items begin
+        header_cutoff_y = max(140, memo_number_bottom_y, supplier_bottom_y)
+
         # Dynamically cluster OCR body blocks into horizontal lines
-        body_blocks = [b for b in ocr_blocks if 140 <= b["bbox"][0] <= 850 and b["bbox"][1] >= 40]
+        body_blocks = [
+            b for b in ocr_blocks
+            if b["bbox"][0] >= (header_cutoff_y - 15)
+            and b["bbox"][0] <= 760
+            and not (detected_memo_number and detected_memo_number in b["text"])
+            and not (supplier_name and any(w in b["text"].lower() for w in ["color", "kcolor", "cosmetics"]))
+            and not (b["bbox"][0] > 700 and re.search(r'\d{5,}', b["text"]))
+            and len(b["text"].strip()) > 1
+        ]
         body_blocks.sort(key=lambda b: b["ymin"])
 
         line_clusters = []
@@ -124,7 +143,8 @@ class RapidOCRVisionProvider(VisionLLMProvider):
         for idx, cl in enumerate(line_clusters, 1):
             cl.sort(key=lambda item: item["xmin"])
             line_text = " ".join(item["text"] for item in cl).strip()
-            if not line_text:
+            # Skip empty, pure punctuation/numbers, or noise without at least 2 letters
+            if not line_text or not re.search(r'[a-zA-Z\u0980-\u09FF]{2,}', line_text):
                 continue
 
             ymin_c = min(item["ymin"] for item in cl)
