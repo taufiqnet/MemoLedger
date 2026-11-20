@@ -153,11 +153,11 @@
   </div>
 
   <!-- Main Split Layout (Photo beside Table) -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
     <!-- Column 1: Memo Photo with SVG Bounding Box Overlay -->
     <div id="photo-column"
-      class="hidden lg:block bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm sticky top-16">
+      class="hidden lg:block lg:col-span-5 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm sticky top-16">
       <div class="text-xs font-bold text-slate-600 mb-2.5 flex items-center justify-between">
         <span class="flex items-center gap-1.5">
           <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,7 +182,7 @@
     </div>
 
     <!-- Column 2: Editable Form Rows & CRUD Line Items -->
-    <div id="table-column" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
+    <div id="table-column" class="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
 
       <div class="px-4 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div>
@@ -205,15 +205,15 @@
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs border-collapse">
+        <table class="w-full text-left text-xs border-collapse min-w-[720px]">
           <thead>
             <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
-              <th class="p-2.5 w-7 text-center">#</th>
-              <th class="p-2.5 min-w-[140px]">পণ্যের নাম ও ক্যাটালগ লিঙ্ক</th>
-              <th class="p-2.5 w-16 text-center">সাইজ/শেড</th>
-              <th class="p-2.5 w-16 text-right">পরিমাণ</th>
-              <th class="p-2.5 w-20 text-right">দর (৳)</th>
-              <th class="p-2.5 w-24 text-right">মোট (৳)</th>
+              <th class="p-2.5 w-8 text-center">#</th>
+              <th class="p-2.5 min-w-[280px]">পণ্যের নাম ও ক্যাটালগ লিঙ্ক</th>
+              <th class="p-2.5 w-20 text-center">সাইজ/শেড</th>
+              <th class="p-2.5 min-w-[100px] w-28 text-right">পরিমাণ</th>
+              <th class="p-2.5 min-w-[110px] w-32 text-right">দর (৳)</th>
+              <th class="p-2.5 min-w-[120px] w-36 text-right">মোট (৳)</th>
               {% if memo.status != 'APPROVED' %}
               <th class="p-2.5 w-10 text-center">মুছুন</th>
               {% endif %}
@@ -227,9 +227,9 @@
 
               <td class="p-2 text-slate-500 font-bold text-center">{{ line.line_number }}</td>
 
-              <td class="p-2 space-y-1">
+              <td class="p-2 space-y-1 min-w-[280px]">
                 <input type="text" 
-                       class="line-name-input w-full p-2 border border-slate-300 rounded font-bold text-xs focus:ring-1 focus:ring-teal-500 {{ 'bg-slate-100 text-slate-600' if memo.status == 'APPROVED' else '' }}" 
+                       class="line-name-input w-full p-2.5 border border-slate-300 rounded-lg font-bold text-xs md:text-sm focus:ring-2 focus:ring-teal-500 {{ 'bg-slate-100 text-slate-600' if memo.status == 'APPROVED' else 'bg-white' }}" 
                        value="{{ line.parsed_name or '' }}"
                        placeholder="পণ্যের নাম লিখুন বা নির্বাচন করুন..."
                        {{ 'readonly disabled' if memo.status == 'APPROVED' else '' }}>
@@ -237,7 +237,7 @@
 
                 <!-- Catalog Match Dropdown / Suggestions -->
                 <div class="mt-1">
-                  <select class="line-variant-select w-full text-[11px] p-1.5 border border-slate-200 rounded bg-slate-50 focus:ring-1 focus:ring-teal-500" {{ 'disabled' if memo.status == 'APPROVED' else '' }}>
+                  <select class="line-variant-select w-full text-xs p-2 border border-slate-200 rounded-lg bg-slate-50 focus:ring-2 focus:ring-teal-500" {{ 'disabled' if memo.status == 'APPROVED' else '' }}>
                     <option value="">-- ক্যাটালগ লিংক নেই --</option>
                     {% for v in variants %}
                     <option value="{{ v.id }}" {{ 'selected' if line.matched_variant_id==v.id else '' }}>
@@ -249,40 +249,40 @@
                 </div>
               </td>
 
-              <td class="p-2">
+              <td class="p-2 w-20">
                 <input type="text" 
-                       class="line-variant-input w-full p-2 border border-slate-300 rounded text-center text-xs {{ 'bg-slate-100 text-slate-600' if memo.status == 'APPROVED' else '' }}" 
+                       class="line-variant-input w-full p-2.5 border border-slate-300 rounded-lg text-center text-xs font-semibold {{ 'bg-slate-100 text-slate-600' if memo.status == 'APPROVED' else 'bg-white' }}" 
                        value="{{ line.parsed_variant or '' }}" 
                        placeholder="-"
                        {{ 'readonly disabled' if memo.status == 'APPROVED' else '' }}>
               </td>
 
-              <td class="p-2">
+              <td class="p-2 min-w-[100px] w-28">
                 <input type="number" 
                        step="0.5" 
-                       class="line-qty-input w-full p-2 border border-slate-300 rounded text-right font-bold text-xs {{ 'bg-slate-100 text-slate-600' if memo.status == 'APPROVED' else '' }}" 
+                       class="line-qty-input w-full p-2.5 border border-slate-300 rounded-lg text-right font-black text-xs md:text-sm focus:ring-2 focus:ring-teal-500 {{ 'bg-slate-100 text-slate-600' if memo.status == 'APPROVED' else 'bg-white' }}" 
                        value="{{ line.parsed_qty }}"
                        {{ 'readonly disabled' if memo.status == 'APPROVED' else '' }}>
               </td>
 
-              <td class="p-2">
+              <td class="p-2 min-w-[110px] w-32">
                 <input type="number" 
                        step="1" 
-                       class="line-price-input w-full p-2 border border-slate-300 rounded text-right font-bold text-xs {{ 'bg-slate-100 text-slate-600' if memo.status == 'APPROVED' else '' }}" 
+                       class="line-price-input w-full p-2.5 border border-slate-300 rounded-lg text-right font-black text-xs md:text-sm focus:ring-2 focus:ring-teal-500 {{ 'bg-slate-100 text-slate-600' if memo.status == 'APPROVED' else 'bg-white' }}" 
                        value="{{ line.parsed_unit_price or 0 }}"
                        {{ 'readonly disabled' if memo.status == 'APPROVED' else '' }}>
               </td>
 
-              <td class="p-2">
+              <td class="p-2 min-w-[120px] w-36">
                 <input type="number" 
                        step="1" 
-                       class="line-total-input w-full p-2 border border-slate-200 rounded text-right font-extrabold text-teal-800 bg-slate-50 text-xs" 
+                       class="line-total-input w-full p-2.5 border border-slate-200 rounded-lg text-right font-black text-teal-800 bg-slate-50 text-xs md:text-sm" 
                        value="{{ line.parsed_line_total or 0 }}" 
                        readonly>
               </td>
 
               {% if memo.status != 'APPROVED' %}
-              <td class="p-2 text-center">
+              <td class="p-2 text-center w-10">
                 <button type="button"
                   class="delete-line-row-btn text-slate-400 hover:text-rose-600 p-1.5 transition-colors"
                   title="লাইন মুছুন">

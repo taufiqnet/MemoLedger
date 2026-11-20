@@ -345,22 +345,22 @@ function setupManualMemoForm() {
       const tr = document.createElement('tr');
       tr.className = 'manual-line-row';
       tr.innerHTML = `
-        <td class="p-2">
-          <input type="text" class="manual-line-name w-full p-2 border border-slate-300 rounded text-xs font-medium focus:ring-1 focus:ring-teal-500" placeholder="পণ্যের নাম" required>
+        <td class="p-2 min-w-[260px]">
+          <input type="text" class="manual-line-name w-full p-2.5 border border-slate-300 rounded-lg text-xs md:text-sm font-bold focus:ring-2 focus:ring-teal-500" placeholder="পণ্যের নাম" required>
         </td>
-        <td class="p-2">
-          <input type="text" class="manual-line-variant w-full p-2 border border-slate-300 rounded text-xs text-center" placeholder="-">
+        <td class="p-2 w-24">
+          <input type="text" class="manual-line-variant w-full p-2.5 border border-slate-300 rounded-lg text-xs font-semibold text-center" placeholder="-">
         </td>
-        <td class="p-2">
-          <input type="number" step="1" class="manual-line-qty w-full p-2 border border-slate-300 rounded text-xs text-right font-bold" value="1" required>
+        <td class="p-2 min-w-[100px] w-28">
+          <input type="number" step="1" class="manual-line-qty w-full p-2.5 border border-slate-300 rounded-lg text-xs md:text-sm text-right font-black focus:ring-2 focus:ring-teal-500" value="1" required>
         </td>
-        <td class="p-2">
-          <input type="number" step="1" class="manual-line-price w-full p-2 border border-slate-300 rounded text-xs text-right font-bold" value="0" required>
+        <td class="p-2 min-w-[110px] w-32">
+          <input type="number" step="1" class="manual-line-price w-full p-2.5 border border-slate-300 rounded-lg text-xs md:text-sm text-right font-black focus:ring-2 focus:ring-teal-500" value="0" required>
         </td>
-        <td class="p-2">
-          <input type="number" step="1" class="manual-line-total w-full p-2 border border-slate-200 rounded text-xs text-right font-bold bg-slate-50 text-teal-700" value="0" readonly>
+        <td class="p-2 min-w-[120px] w-36">
+          <input type="number" step="1" class="manual-line-total w-full p-2.5 border border-slate-200 rounded-lg text-xs md:text-sm text-right font-black bg-slate-50 text-teal-800" value="0" readonly>
         </td>
-        <td class="p-2 text-center">
+        <td class="p-2 text-center w-10">
           <button type="button" class="remove-line-btn text-slate-400 hover:text-rose-600 p-1.5 transition-colors" title="লাইন মুছুন">
             ✕
           </button>

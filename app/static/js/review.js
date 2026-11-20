@@ -337,23 +337,23 @@ export function initReview() {
 
         tr.innerHTML = `
           <td class="p-2 text-slate-500 font-bold text-center">${data.line_number}</td>
-          <td class="p-2 space-y-1">
-            <input type="text" class="line-name-input w-full p-2 border border-slate-300 rounded font-bold text-xs focus:ring-1 focus:ring-teal-500" value="নতুন আইটেম">
+          <td class="p-2 space-y-1 min-w-[280px]">
+            <input type="text" class="line-name-input w-full p-2.5 border border-slate-300 rounded-lg font-bold text-xs md:text-sm focus:ring-2 focus:ring-teal-500" value="নতুন আইটেম">
             <div class="text-[10px] text-slate-400">ম্যানুয়ালি যোগ করা হয়েছে</div>
           </td>
-          <td class="p-2">
-            <input type="text" class="line-variant-input w-full p-2 border border-slate-300 rounded text-center text-xs" placeholder="-">
+          <td class="p-2 w-20">
+            <input type="text" class="line-variant-input w-full p-2.5 border border-slate-300 rounded-lg text-center text-xs font-semibold" placeholder="-">
           </td>
-          <td class="p-2">
-            <input type="number" step="0.5" class="line-qty-input w-full p-2 border border-slate-300 rounded text-right font-bold text-xs" value="1">
+          <td class="p-2 min-w-[100px] w-28">
+            <input type="number" step="0.5" class="line-qty-input w-full p-2.5 border border-slate-300 rounded-lg text-right font-black text-xs md:text-sm focus:ring-2 focus:ring-teal-500" value="1">
           </td>
-          <td class="p-2">
-            <input type="number" step="1" class="line-price-input w-full p-2 border border-slate-300 rounded text-right font-bold text-xs" value="0">
+          <td class="p-2 min-w-[110px] w-32">
+            <input type="number" step="1" class="line-price-input w-full p-2.5 border border-slate-300 rounded-lg text-right font-black text-xs md:text-sm focus:ring-2 focus:ring-teal-500" value="0">
           </td>
-          <td class="p-2">
-            <input type="number" step="1" class="line-total-input w-full p-2 border border-slate-200 rounded text-right font-extrabold text-teal-800 bg-slate-50 text-xs" value="0">
+          <td class="p-2 min-w-[120px] w-36">
+            <input type="number" step="1" class="line-total-input w-full p-2.5 border border-slate-200 rounded-lg text-right font-black text-teal-800 bg-slate-50 text-xs md:text-sm" value="0" readonly>
           </td>
-          <td class="p-2 text-center">
+          <td class="p-2 text-center w-10">
             <button type="button" class="delete-line-row-btn text-slate-400 hover:text-rose-600 p-1.5 transition-colors" title="লাইন মুছুন">✕</button>
           </td>
         `;
