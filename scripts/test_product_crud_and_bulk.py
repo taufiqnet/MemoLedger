@@ -42,8 +42,31 @@ class TestProductCRUDAndBulk(unittest.TestCase):
         
         self.assertEqual(res["status"], "SUCCESS")
         self.assertEqual(res["created_count"], 2)
-        self.assertIn(p1, res["created_names"])
-        self.assertIn(p2, res["created_names"])
+        self.assertTrue(any(p1 in item for item in res["created_items"]))
+        self.assertTrue(any(p2 in item for item in res["created_items"]))
+
+    def test_bulk_product_creation_with_short_names(self):
+        p1_full = f"Lilac Brightening Cream {uuid.uuid4().hex[:4]}"
+        p1_short = "Lilac B/C"
+        p2_full = f"SASI BB Perfect Powder {uuid.uuid4().hex[:4]}"
+        p2_short = "Sasi BB - Powder"
+        
+        class DummyUser:
+            tenant_id = self.tenant.id
+
+        payload = ProductBulkCreate(names=[f"{p1_full} - {p1_short}\n{p2_full} - {p2_short}"])
+        res = bulk_create_products(payload=payload, current_user=DummyUser(), db=self.db)
+        
+        self.assertEqual(res["status"], "SUCCESS")
+        self.assertEqual(res["created_count"], 2)
+        
+        p1 = self.db.query(Product).filter(Product.name == p1_full).first()
+        self.assertIsNotNone(p1)
+        self.assertEqual(p1.short_name, p1_short)
+
+        p2 = self.db.query(Product).filter(Product.name == p2_full).first()
+        self.assertIsNotNone(p2)
+        self.assertEqual(p2.short_name, p2_short)
 
     def test_fuzzy_matching_and_clean_name(self):
         res = ProductResolver.resolve_line(

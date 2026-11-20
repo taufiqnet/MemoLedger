@@ -43,6 +43,7 @@ def create_product(
     product = Product(
         tenant_id=current_user.tenant_id,
         name=product_in.name.strip(),
+        short_name=product_in.short_name.strip() if product_in.short_name else None,
         brand=product_in.brand.strip() if product_in.brand else None,
         product_type=product_in.product_type,
         description=product_in.description,
@@ -52,7 +53,7 @@ def create_product(
 
     if product_in.variants:
         for v in product_in.variants:
-            emb = vector_embedder.embed_text(f"{product.brand or ''} {product.name} {v.size_value or ''}{v.size_unit or ''} {v.variant_code or ''}")
+            emb = vector_embedder.embed_text(f"{product.brand or ''} {product.name} {product.short_name or ''} {v.size_value or ''}{v.size_unit or ''} {v.variant_code or ''}")
             variant = ProductVariant(
                 product_id=product.id,
                 sku=v.sku or f"SKU-{uuid.uuid4().hex[:6].upper()}",
@@ -67,7 +68,7 @@ def create_product(
             db.add(variant)
     else:
         # Auto-create default variant for seamless matching and ledger tracking
-        emb = vector_embedder.embed_text(product.name)
+        emb = vector_embedder.embed_text(f"{product.name} {product.short_name or ''}")
         variant = ProductVariant(
             product_id=product.id,
             sku=f"SKU-{uuid.uuid4().hex[:6].upper()}",
@@ -93,14 +94,17 @@ def create_product_simple(
     if not name:
         raise HTTPException(status_code=400, detail="Product name cannot be empty")
 
+    short_name = product_in.short_name.strip() if product_in.short_name else None
+
     product = Product(
         tenant_id=current_user.tenant_id,
         name=name,
+        short_name=short_name,
     )
     db.add(product)
     db.flush()
 
-    emb = vector_embedder.embed_text(product.name)
+    emb = vector_embedder.embed_text(f"{product.name} {product.short_name or ''}")
     variant = ProductVariant(
         product_id=product.id,
         sku=f"SKU-{uuid.uuid4().hex[:6].upper()}",
@@ -122,35 +126,58 @@ def bulk_create_products(
     db: Session = Depends(get_db)
 ):
     created = []
-    skipped = []
+    updated = []
     
     # Flatten names in case user passed a multi-line string or list
-    raw_names = []
+    raw_lines = []
     for item in payload.names:
         for sub in item.split("\n"):
             line = sub.strip()
             if line:
-                raw_names.append(line)
+                raw_lines.append(line)
 
-    for name in raw_names:
-        # Check if product with same name exists for this tenant (case-insensitive)
+    for raw_line in raw_lines:
+        # Support "Full Name - Short Name", "Full Name | Short Name", or "Full Name"
+        full_name = raw_line
+        short_name = raw_line
+
+        if " - " in raw_line:
+            parts = [p.strip() for p in raw_line.split(" - ", 1)]
+            full_name = parts[0]
+            short_name = parts[1] if len(parts) > 1 and parts[1] else parts[0]
+        elif "|" in raw_line:
+            parts = [p.strip() for p in raw_line.split("|", 1)]
+            full_name = parts[0]
+            short_name = parts[1] if len(parts) > 1 and parts[1] else parts[0]
+        elif "-" in raw_line and not any(raw_line.endswith(suffix) for suffix in ["ml", "gm", "kg", "pc"]):
+            parts = [p.strip() for p in raw_line.split("-", 1)]
+            full_name = parts[0]
+            short_name = parts[1] if len(parts) > 1 and parts[1] else parts[0]
+
+        # Check if product with same name exists for this tenant
         existing = db.query(Product).filter(
             Product.tenant_id == current_user.tenant_id,
-            Product.name.ilike(name)
+            Product.name.ilike(full_name)
         ).first()
 
         if existing:
-            skipped.append(name)
+            # Update short_name if provided
+            existing.short_name = short_name
+            if existing.variants:
+                emb = vector_embedder.embed_text(f"{full_name} {short_name}")
+                existing.variants[0].embedding = emb
+            updated.append(f"{full_name} (Short: {short_name})")
             continue
 
         prod = Product(
             tenant_id=current_user.tenant_id,
-            name=name
+            name=full_name,
+            short_name=short_name,
         )
         db.add(prod)
         db.flush()
 
-        emb = vector_embedder.embed_text(name)
+        emb = vector_embedder.embed_text(f"{full_name} {short_name}")
         var = ProductVariant(
             product_id=prod.id,
             sku=f"SKU-{uuid.uuid4().hex[:6].upper()}",
@@ -160,15 +187,15 @@ def bulk_create_products(
             embedding=emb,
         )
         db.add(var)
-        created.append(name)
+        created.append(f"{full_name} (Short: {short_name})")
 
     db.commit()
     return {
         "status": "SUCCESS",
         "created_count": len(created),
-        "skipped_count": len(skipped),
-        "created_names": created,
-        "skipped_names": skipped,
+        "updated_count": len(updated),
+        "created_items": created,
+        "updated_items": updated,
     }
 
 
@@ -203,6 +230,8 @@ def update_product(
 
     if product_update.name is not None:
         product.name = product_update.name
+    if product_update.short_name is not None:
+        product.short_name = product_update.short_name
     if product_update.brand is not None:
         product.brand = product_update.brand
     if product_update.product_type is not None:

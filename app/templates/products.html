@@ -37,18 +37,18 @@
   <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
     {% for p in products %}
     <div class="product-card bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between space-y-4"
-         data-name="{{ p.name|lower }}"
+         data-name="{{ p.name|lower }} {{ (p.short_name or '')|lower }}"
          data-brand="{{ (p.brand or '')|lower }}">
       
       <div>
         <!-- Brand & Actions -->
         <div class="flex items-start justify-between gap-2">
           <span class="text-[10px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded uppercase tracking-wider">
-            {{ p.brand or "Unknown Brand" }}
+            {{ p.brand or "General Item" }}
           </span>
           <div class="flex items-center gap-1">
             <button type="button" 
-                    onclick="openEditProductModal('{{ p.id }}', '{{ p.name|escape }}', '{{ (p.brand or '')|escape }}', '{{ (p.product_type or '')|escape }}', '{{ (p.description or '')|escape }}')"
+                    onclick="openEditProductModal('{{ p.id }}', '{{ p.name|escape }}', '{{ (p.short_name or '')|escape }}', '{{ (p.brand or '')|escape }}', '{{ (p.product_type or '')|escape }}', '{{ (p.description or '')|escape }}')"
                     class="p-1.5 text-slate-400 hover:text-teal-700 hover:bg-slate-100 rounded transition-colors" title="পণ্য এডিট করুন">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
             </button>
@@ -61,7 +61,13 @@
         </div>
 
         <h2 class="text-base font-bold text-slate-800 mt-1.5">{{ p.name }}</h2>
-        <div class="text-xs text-slate-500">{{ p.product_type or "General Item" }}</div>
+        {% if p.short_name %}
+        <div class="mt-1 flex items-center gap-1.5 text-xs text-slate-600">
+          <span class="font-semibold text-slate-500">শর্ট নেম:</span>
+          <span class="bg-amber-50 text-amber-800 font-mono font-semibold px-2 py-0.5 rounded border border-amber-200/80 text-[11px]">{{ p.short_name }}</span>
+        </div>
+        {% endif %}
+        <div class="text-xs text-slate-400 mt-1">{{ p.product_type or "General Item" }}</div>
       </div>
 
       <!-- Variants Sub-Section -->
@@ -117,40 +123,41 @@
 
     <form id="add-product-form" class="space-y-4">
       <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের নাম *</label>
-        <input type="text" id="add-p-name" placeholder="যেমন: Sunscreen 625ml, Bath Salt, W7 Eye" class="w-full text-xs md:text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 font-medium" required>
-        <p class="text-[11px] text-slate-400 mt-1">শুধু পণ্যের নাম লিখলেই হবে, সিস্টেম স্বয়ংক্রিয়ভাবে মেমোর সাথে ম্যাচ করবে।</p>
+        <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের পুরো নাম (Full Product Name) *</label>
+        <input type="text" id="add-p-name" placeholder="যেমন: Lilac Brightening Cream, Soft Finish Sun Milk" class="w-full text-xs md:text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 font-medium" required>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">সংক্ষিপ্ত নাম / শর্ট নেম (Short Name / Handwritten) *</label>
+        <input type="text" id="add-p-short-name" placeholder="যেমন: Lilac B/C, Soft (f), Sasi BB - Powder" class="w-full text-xs md:text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 font-medium" required>
+        <p class="text-[11px] text-slate-400 mt-1">মেমোতে হাতে লেখা যে নাম থাকবে তার সাথে এই শর্ট নেমটি স্বয়ংক্রিয়ভাবে মিলবে।</p>
       </div>
 
       <!-- Optional Collapsible Details -->
       <details class="group bg-slate-50 p-3 rounded-xl border border-slate-200">
         <summary class="text-xs font-bold text-slate-600 cursor-pointer select-none flex items-center justify-between">
-          <span>+ অতিরিক্ত বিবরণ (ঐচ্ছিক: ব্র্যান্ড, দর, সাইজ)</span>
+          <span>+ অতিরিক্ত বিবরণ (ঐচ্ছিক: দর, ব্র্যান্ড)</span>
           <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
         </summary>
         <div class="mt-3 space-y-3 pt-2 border-t border-slate-200/60">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
               <label class="block text-[11px] font-semibold text-slate-600 mb-1">ব্র্যান্ড</label>
-              <input type="text" id="add-p-brand" placeholder="যেমন: Neutrogena" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
+              <input type="text" id="add-p-brand" placeholder="যেমন: Lilac, SASI" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
             </div>
             <div>
               <label class="block text-[11px] font-semibold text-slate-600 mb-1">ক্যাটাগরি / ধরন</label>
               <input type="text" id="add-p-type" placeholder="যেমন: Skin Care" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
             </div>
           </div>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block text-[11px] font-semibold text-slate-600 mb-1">ক্রয় মূল্য (৳)</label>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">ক্রয় মূল্য / দর (৳)</label>
               <input type="number" step="0.5" id="add-v-cost" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold">
             </div>
             <div>
               <label class="block text-[11px] font-semibold text-slate-600 mb-1">বিক্রয় মূল্য (৳)</label>
               <input type="number" step="0.5" id="add-v-retail" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold">
-            </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-slate-600 mb-1">প্রারম্ভিক স্টক</label>
-              <input type="number" step="1" id="add-v-stock" value="0" class="w-full text-xs p-2 border border-slate-300 rounded bg-white font-bold">
             </div>
           </div>
         </div>
@@ -174,16 +181,16 @@
     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
       <div>
         <h3 class="text-base md:text-lg font-bold text-slate-800">📋 একসাথে একাধিক পণ্য যোগ করুন</h3>
-        <p class="text-xs text-slate-500 mt-0.5">প্রতি লাইনে একটি করে পণ্যের নাম লিখুন বা পেস্ট করুন</p>
+        <p class="text-xs text-slate-500 mt-0.5">প্রতি লাইনে: <b>পুরো নাম - শর্ট নেম</b> লিখুন বা পেস্ট করুন</p>
       </div>
       <button type="button" onclick="closeModal('bulk-product-modal')" class="text-slate-400 hover:text-slate-600 p-1 font-bold text-lg">✕</button>
     </div>
 
     <form id="bulk-product-form" class="space-y-4">
       <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের নামের তালিকা *</label>
-        <textarea id="bulk-p-names" rows="8" placeholder="Sunscreen 625ml&#10;Emeli Lipstick&#10;Bath Salt&#10;W7 Eye Shadow&#10;BOB Mascara&#10;Vaseline 50ml Cocoa&#10;Ribana Castor Oil&#10;Cosrx Salicylic Acid" class="w-full text-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 font-mono leading-relaxed" required></textarea>
-        <p class="text-[11px] text-slate-400 mt-1">পণ্যগুলো ডাটাবেসে সেভ হবে এবং মেমোর অস্পষ্ট বা হাতের লেখার সাথে স্বয়ংক্রিয়ভাবে নিখুঁত ম্যাচ হবে।</p>
+        <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের তালিকা *</label>
+        <textarea id="bulk-p-names" rows="9" placeholder="Lilac Brightening Cream - Lilac B/C&#10;Zafran Hair Growth Therapy - Zafran H/Oil&#10;Bath Salt - Bath Salt&#10;Soft Finish Sun Milk - Soft (f)&#10;YC Cucumber Face Wash - YC-Cu F/W&#10;SASI BB Perfect Powder - Sasi BB - Powder" class="w-full text-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 font-mono leading-relaxed" required></textarea>
+        <p class="text-[11px] text-slate-400 mt-1">ফরমেট: পুরো নাম - শর্ট নেম। শর্ট নেমের সাথে মেমোর হাতের লেখা মিলবে এবং টেবিলে পুরো নাম ও সঠিক দর প্রদর্শিত হবে।</p>
       </div>
 
       <div class="pt-2 flex items-center justify-end gap-2.5">
@@ -210,8 +217,12 @@
     <form id="edit-product-form" class="space-y-3.5">
       <input type="hidden" id="edit-p-id">
       <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের নাম *</label>
+        <label class="block text-xs font-bold text-slate-700 mb-1">পণ্যের পুরো নাম *</label>
         <input type="text" id="edit-p-name" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500" required>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">সংক্ষিপ্ত নাম / শর্ট নেম</label>
+        <input type="text" id="edit-p-short-name" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-1 focus:ring-teal-500" placeholder="যেমন: Lilac B/C">
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>

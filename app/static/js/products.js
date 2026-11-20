@@ -11,9 +11,11 @@ window.openBulkProductModal = function() {
   window.openModal('bulk-product-modal');
 };
 
-window.openEditProductModal = function(id, name, brand, type, desc) {
+window.openEditProductModal = function(id, name, shortName, brand, type, desc) {
   document.getElementById('edit-p-id').value = id;
   document.getElementById('edit-p-name').value = name;
+  const shortInput = document.getElementById('edit-p-short-name');
+  if (shortInput) shortInput.value = shortName || '';
   document.getElementById('edit-p-brand').value = brand || '';
   document.getElementById('edit-p-type').value = type || '';
   document.getElementById('edit-p-desc').value = desc || '';
@@ -85,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const name = document.getElementById('add-p-name').value.trim();
+      const shortName = document.getElementById('add-p-short-name')?.value.trim();
       const brand = document.getElementById('add-p-brand')?.value.trim();
       const ptype = document.getElementById('add-p-type')?.value.trim();
       
@@ -94,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const payload = {
         name: name,
+        short_name: shortName || null,
         brand: brand || null,
         product_type: ptype || null,
         variants: []
@@ -194,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const id = document.getElementById('edit-p-id').value;
       const payload = {
         name: document.getElementById('edit-p-name').value.trim(),
+        short_name: document.getElementById('edit-p-short-name')?.value.trim() || null,
         brand: document.getElementById('edit-p-brand').value.trim() || null,
         product_type: document.getElementById('edit-p-type').value.trim() || null,
         description: document.getElementById('edit-p-desc').value.trim() || null,

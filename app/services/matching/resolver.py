@@ -147,20 +147,26 @@ class ProductResolver:
 
         for candidate in candidates:
             cand_name = candidate.product.name
+            cand_short = candidate.product.short_name or ""
             cand_brand = candidate.product.brand or ""
             full_cand_text = f"{cand_brand} {cand_name}".strip()
 
-            # Fuzzy + Trigram score on name
-            base_score = max(
+            # Fuzzy + Trigram score on Full Name AND Short Name (handwritten variant)
+            scores = [
                 compute_fuzzy_score(parsed_name, cand_name),
                 compute_fuzzy_score(parsed_name, full_cand_text)
-            )
+            ]
+            if cand_short:
+                scores.append(compute_fuzzy_score(parsed_name, cand_short))
+                scores.append(compute_fuzzy_score(parsed_name, f"{cand_brand} {cand_short}".strip()))
+
+            base_score = max(scores)
 
             # Vector cosine similarity
             if candidate.embedding:
                 cand_emb = candidate.embedding if isinstance(candidate.embedding, list) else list(candidate.embedding)
             else:
-                cand_emb = vector_embedder.embed_text(full_cand_text)
+                cand_emb = vector_embedder.embed_text(f"{cand_name} {cand_short}".strip())
             vec_score = vector_embedder.cosine_similarity(query_emb, cand_emb)
 
             # Combined base text similarity

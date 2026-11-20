@@ -30,6 +30,7 @@ class Product(Base):
     id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id = Column(Uuid(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String(255), nullable=False, index=True)
+    short_name = Column(String(255), nullable=True, index=True)
     brand = Column(String(255), nullable=True, index=True)
     product_type = Column(String(100), nullable=True, index=True)
     description = Column(Text, nullable=True)

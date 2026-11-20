@@ -38,6 +38,7 @@ class ProductVariantResponse(ProductVariantBase):
 
 class ProductBase(BaseModel):
     name: str
+    short_name: Optional[str] = None
     brand: Optional[str] = None
     product_type: Optional[str] = None
     description: Optional[str] = None
@@ -49,6 +50,7 @@ class ProductCreate(ProductBase):
 
 class ProductSimpleCreate(BaseModel):
     name: str
+    short_name: Optional[str] = None
     cost_price: Optional[Decimal] = Decimal("0.00")
     retail_price: Optional[Decimal] = Decimal("0.00")
 
@@ -59,6 +61,7 @@ class ProductBulkCreate(BaseModel):
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
+    short_name: Optional[str] = None
     brand: Optional[str] = None
     product_type: Optional[str] = None
     description: Optional[str] = None
@@ -67,6 +70,7 @@ class ProductUpdate(BaseModel):
 class ProductResponse(ProductBase):
     id: uuid.UUID
     tenant_id: uuid.UUID
+    short_name: Optional[str] = None
     variants: List[ProductVariantResponse] = []
 
     class Config:
