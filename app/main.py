@@ -198,7 +198,39 @@ def products_page(
     tenant: Tenant = Depends(get_current_tenant),
     db: Session = Depends(get_db)
 ):
-    products = db.query(Product).filter(Product.tenant_id == tenant.id).all()
+    import json
+    products = db.query(Product).filter(Product.tenant_id == tenant.id).order_by(Product.name).all()
+    products_list = []
+    for p in products:
+        variants_data = [
+            {
+                "id": str(v.id),
+                "sku": v.sku or "",
+                "size_value": v.size_value or "",
+                "size_unit": v.size_unit or "",
+                "variant_code": v.variant_code or "",
+                "cost_price": float(v.cost_price or 0),
+                "retail_price": float(v.retail_price or 0),
+                "current_stock": float(v.current_stock or 0)
+            }
+            for v in p.variants
+        ]
+        primary_cost = float(p.variants[0].cost_price) if p.variants else 0.0
+        primary_retail = float(p.variants[0].retail_price) if p.variants else 0.0
+        total_stock = sum(float(v.current_stock or 0) for v in p.variants)
+        products_list.append({
+            "id": str(p.id),
+            "name": p.name,
+            "short_name": p.short_name or "",
+            "brand": p.brand or "",
+            "product_type": p.product_type or "",
+            "description": p.description or "",
+            "cost_price": primary_cost,
+            "retail_price": primary_retail,
+            "total_stock": total_stock,
+            "variants": variants_data
+        })
+
     return templates.TemplateResponse(
         request=request,
         name="products.html",
@@ -206,6 +238,8 @@ def products_page(
             "user": current_user,
             "tenant": tenant,
             "products": products,
+            "products_json": json.dumps(products_list),
+            "total_count": len(products),
         }
     )
 
