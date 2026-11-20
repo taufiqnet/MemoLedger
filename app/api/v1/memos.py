@@ -131,23 +131,17 @@ async def upload_memo(
     db.commit()
     db.refresh(memo)
 
-    # Run extraction pipeline
-    task_id = None
-    try:
-        from app.workers.tasks import extract_memo_task
-        task = extract_memo_task.delay(str(memo.id))
-        task_id = task.id
-    except Exception:
-        # Inline fallback for standalone web server execution
-        from app.services.extraction.pipeline import MemoExtractionPipeline
-        pipeline = MemoExtractionPipeline(db=db)
-        pipeline.run(memo_id=memo.id)
+    # Execute extraction pipeline directly to guarantee extracted lines and totals are populated immediately
+    from app.services.extraction.pipeline import MemoExtractionPipeline
+    pipeline = MemoExtractionPipeline(db=db)
+    pipeline.run(memo_id=memo.id)
+    db.refresh(memo)
 
     return MemoUploadResponse(
         memo_id=memo.id,
-        task_id=task_id,
+        task_id=None,
         status=memo.status,
-        message="Memo uploaded and processing started."
+        message="মেমো সফলভাবে আপলোড ও প্রসেস করা হয়েছে।"
     )
 
 
