@@ -9,6 +9,10 @@ export function initReview() {
   const tableBody = document.getElementById('lines-table-body');
   const grandTotalEl = document.getElementById('review-grand-total');
   const totalMismatchAlert = document.getElementById('total-mismatch-banner');
+  const subtotalEl = document.getElementById('review-calculated-subtotal');
+  const editableTotalInput = document.getElementById('review-editable-total');
+  const comparisonIndicator = document.getElementById('total-comparison-indicator');
+  const footerCurrentTotal = document.getElementById('footer-current-total');
 
   const saveDraftBtn = document.getElementById('save-draft-btn');
   const bottomSaveDraftBtn = document.getElementById('bottom-save-draft-btn');
@@ -128,28 +132,67 @@ export function initReview() {
         }
       }
     });
+
+    if (editableTotalInput) {
+      editableTotalInput.addEventListener('input', () => {
+        recalculateGrandTotal();
+      });
+    }
   }
 
   function recalculateGrandTotal() {
-    let sum = 0;
+    let subtotal = 0;
     document.querySelectorAll('.line-total-input').forEach((inp) => {
-      sum += parseFloat(inp.value) || 0;
+      subtotal += parseFloat(inp.value) || 0;
     });
 
-    if (grandTotalEl) {
-      grandTotalEl.textContent = `৳${sum.toFixed(2)}`;
+    if (subtotalEl) {
+      subtotalEl.textContent = `৳${subtotal.toFixed(2)}`;
     }
 
-    const writtenTotalAttr = container.getAttribute('data-written-total');
-    if (writtenTotalAttr) {
-      const writtenTotal = parseFloat(writtenTotalAttr);
-      const diff = Math.abs(sum - writtenTotal);
-      if (totalMismatchAlert) {
-        if (diff > 0.5) {
-          totalMismatchAlert.classList.remove('hidden');
-        } else {
-          totalMismatchAlert.classList.add('hidden');
-        }
+    // Editable total from image (or user edited)
+    let currentTotal = subtotal;
+    if (editableTotalInput && editableTotalInput.value !== '') {
+      currentTotal = parseFloat(editableTotalInput.value) || 0;
+    }
+
+    if (grandTotalEl) {
+      grandTotalEl.textContent = `৳${currentTotal.toFixed(2)}`;
+    }
+    if (footerCurrentTotal) {
+      footerCurrentTotal.textContent = `৳${currentTotal.toFixed(2)}`;
+    }
+
+    // Calculate difference between subtotal and memo total for clarification
+    const diff = Math.abs(subtotal - currentTotal);
+
+    if (comparisonIndicator) {
+      if (diff < 0.5) {
+        comparisonIndicator.className = 'flex flex-wrap items-center justify-between p-2.5 rounded-lg text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800 transition-all';
+        comparisonIndicator.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+            <span>উভয় পাশের হিসাব সম্পূর্ণ মিলেছে (আইটেম সাবটোটাল: ৳${subtotal.toFixed(2)} = মেমোর মোট: ৳${currentTotal.toFixed(2)})</span>
+          </div>
+          <span class="text-[11px] bg-emerald-200 text-emerald-900 px-2.5 py-0.5 rounded-full font-bold">✓ ০.০০ পার্থক্য</span>
+        `;
+      } else {
+        comparisonIndicator.className = 'flex flex-wrap items-center justify-between p-2.5 rounded-lg text-xs font-semibold bg-amber-50 border border-amber-300 text-amber-900 transition-all';
+        comparisonIndicator.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+            <span>পার্থক্য স্পষ্টকরণ: আইটেমগুলোর যোগফল ৳${subtotal.toFixed(2)}, কিন্তু মেমোর মোট ৳${currentTotal.toFixed(2)} (পার্থক্য: ৳${diff.toFixed(2)})</span>
+          </div>
+          <span class="text-[11px] bg-amber-200 text-amber-950 px-2.5 py-0.5 rounded-full font-bold">পার্থক্য: ৳${diff.toFixed(2)}</span>
+        `;
+      }
+    }
+
+    if (totalMismatchAlert) {
+      if (diff > 0.5) {
+        totalMismatchAlert.classList.remove('hidden');
+      } else {
+        totalMismatchAlert.classList.add('hidden');
       }
     }
   }
@@ -208,8 +251,11 @@ export function initReview() {
     const suppVal = supplierSelect ? supplierSelect.value : null;
     const supplier_id = (suppVal && suppVal.length === 36) ? suppVal : null;
 
+    const editableTotal = editableTotalInput ? parseFloat(editableTotalInput.value) : null;
+
     const payload = {
       lines,
+      written_total: !isNaN(editableTotal) ? editableTotal : null,
       supplier_id: supplier_id,
       memo_number: memoNumberInput ? (memoNumberInput.value.trim() || null) : null,
       memo_date: memoDateInput ? (memoDateInput.value.trim() || null) : null
@@ -383,12 +429,17 @@ export function initReview() {
     });
 
     const lines = gatherCurrentLines();
+    const editableTotal = editableTotalInput ? parseFloat(editableTotalInput.value) : null;
 
     try {
       const resp = await fetch(`/api/v1/memos/${memoId}/commit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lines })
+        body: JSON.stringify({ 
+          lines,
+          total_amount: !isNaN(editableTotal) ? editableTotal : null,
+          written_total: !isNaN(editableTotal) ? editableTotal : null
+        })
       });
 
       if (!resp.ok) {
@@ -430,6 +481,7 @@ export function initReview() {
     }
     renderBBoxes(linesData);
     setupLiveCalculations();
+    recalculateGrandTotal();
   } catch (e) {
     console.error("Error initializing review:", e);
   }

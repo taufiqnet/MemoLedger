@@ -323,12 +323,14 @@ def save_memo_lines_draft(
             db.add(new_line)
             total_sum += line_tot
 
-    memo.extracted_total = total_sum
     if draft_data.written_total is not None:
         memo.written_total = draft_data.written_total
+        memo.extracted_total = draft_data.written_total
+    else:
+        memo.extracted_total = total_sum
     
     # Recalculate mismatch
-    if memo.written_total is not None and abs(float(memo.extracted_total) - float(memo.written_total)) > 0.5:
+    if memo.written_total is not None and abs(float(total_sum) - float(memo.written_total)) > 0.5:
         memo.total_mismatch_flag = True
     else:
         memo.total_mismatch_flag = False
@@ -439,12 +441,14 @@ def commit_memo(
     db: Session = Depends(get_db)
 ):
     lines_dicts = [l.model_dump() for l in commit_data.lines] if commit_data.lines else None
+    chosen_total = commit_data.total_amount if commit_data.total_amount is not None else commit_data.written_total
     updated_memo = LedgerService.commit_memo(
         db=db,
         tenant_id=current_user.tenant_id,
         user_id=current_user.id,
         memo_id=memo_id,
-        lines_data=lines_dicts
+        lines_data=lines_dicts,
+        total_amount=chosen_total
     )
     return {
         "status": "SUCCESS",

@@ -88,6 +88,8 @@ class MemoDetailResponse(BaseModel):
 
 class MemoCommitRequest(BaseModel):
     lines: Optional[List[MemoLineUpdate]] = None
+    total_amount: Optional[Decimal] = None
+    written_total: Optional[Decimal] = None
     notes: Optional[str] = None
 
 

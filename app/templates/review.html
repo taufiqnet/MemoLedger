@@ -294,14 +294,61 @@
             </tr>
             {% endfor %}
           </tbody>
+          <tfoot class="border-t-2 border-slate-300 bg-slate-50 text-xs">
+            <!-- Row 1: Subtotal Calculation -->
+            <tr class="border-b border-slate-200 bg-slate-100/60">
+              <td colspan="5" class="p-2.5 text-right font-bold text-slate-600">
+                আইটেম সাবটোটাল (সকল লাইনের যোগফল):
+              </td>
+              <td class="p-2 text-right">
+                <span id="review-calculated-subtotal" class="font-extrabold text-slate-800 text-xs">৳0.00</span>
+              </td>
+              {% if memo.status != 'APPROVED' %}
+              <td></td>
+              {% endif %}
+            </tr>
+
+            <!-- Row 2: Editable Total Amount from Image -->
+            <tr class="bg-teal-50/60 border-b border-slate-200">
+              <td colspan="5" class="p-2.5 text-right font-bold text-teal-900">
+                মেমোর মোট টাকা (ছবি অনুযায়ী - পরিবর্তনযোগ্য):
+              </td>
+              <td class="p-2 text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <span class="font-extrabold text-teal-800">৳</span>
+                  <input type="number" 
+                         step="0.01" 
+                         id="review-editable-total" 
+                         value="{{ '%.2f'|format(memo.extracted_total or memo.written_total or 0) }}" 
+                         class="w-28 p-1.5 border border-teal-500 rounded text-right font-extrabold text-xs text-teal-900 bg-white focus:ring-2 focus:ring-teal-500 shadow-xs"
+                         title="মেমোর ছবি অনুযায়ী মোট টাকা (প্রয়োজনে পরিবর্তন করুন)"
+                         {{ 'readonly disabled' if memo.status == 'APPROVED' else '' }}>
+                </div>
+              </td>
+              {% if memo.status != 'APPROVED' %}
+              <td></td>
+              {% endif %}
+            </tr>
+
+            <!-- Row 3: Live Verification & Clarification Indicator -->
+            <tr class="bg-slate-50">
+              <td colspan="{% if memo.status != 'APPROVED' %}7{% else %}6{% endif %}" class="p-2.5">
+                <div id="total-comparison-indicator" class="flex items-center justify-between p-2.5 rounded-lg text-xs font-semibold">
+                  <!-- Dynamic status injected by JS -->
+                </div>
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
 
       <!-- Table Bottom Footer -->
       <div
         class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div class="text-xs text-slate-500">
-          কাগজে লেখা মোট: <strong class="text-slate-700">৳{{ "%.2f"|format(memo.written_total or 0) }}</strong>
+        <div class="text-xs text-slate-500 flex flex-wrap items-center gap-3">
+          <div>কাগজে লেখা মোট: <strong class="text-slate-700">৳{{ "%.2f"|format(memo.written_total or 0) }}</strong></div>
+          <div class="hidden sm:inline text-slate-300">|</div>
+          <div>মেমোর চূড়ান্ত মোট: <strong id="footer-current-total" class="text-teal-800 font-extrabold">৳{{ "%.2f"|format(memo.extracted_total or memo.written_total or 0) }}</strong></div>
         </div>
 
         {% if memo.status != 'APPROVED' %}

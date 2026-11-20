@@ -123,7 +123,8 @@ class LedgerService:
         tenant_id: uuid.UUID,
         user_id: Optional[uuid.UUID],
         memo_id: uuid.UUID,
-        lines_data: Optional[List[dict]] = None
+        lines_data: Optional[List[dict]] = None,
+        total_amount: Optional[Decimal] = None
     ) -> Memo:
         """
         Approves a memo and commits all lines to the append-only stock ledger.
@@ -171,6 +172,10 @@ class LedgerService:
                         except (ValueError, TypeError):
                             pass
                     line.status = item.get("status", "AUTO_MATCHED")
+
+        if total_amount is not None:
+            memo.extracted_total = Decimal(str(total_amount))
+            memo.written_total = Decimal(str(total_amount))
 
         # Post movements to the stock ledger for every line with a matched variant
         for line in memo.lines:
